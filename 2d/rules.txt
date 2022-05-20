@@ -1,0 +1,62 @@
+RULES OF THE WORLD
+----------------------------------------------------
+
+
+1. TTL = (constant / speed) ^ 1.2 ?
+
+2. Gene properties:
+    a) Speed
+    b) Vision
+    c) GPS
+    d) Greed
+    e) Reproduction: {}
+    f) Competition: {}
+
+3. Each gene property is:
+
+    GProp = {
+        props: {},
+        mutationRules: {}
+    }
+
+
+
+
+
+
+GENE properties
+----------------------
+
+a) Speed
+    Determines length of strides per time step.
+    Inversely proportional to TTL (Rule 1).
+
+    MinMax: [1,10]
+
+b) Vision
+    Determines how far a creature can see within their FOV
+    Inversely proportional to ??
+    Advantages:
+        i. Food scouting
+    
+    MinMax: [0,20]
+
+c) GPS
+    Determines creature's positional accuracy and confidence
+    Affects path home
+
+    (0,1)
+
+d) Greed
+    Determines strategy after obtaining X food items
+    (Each choice will be probabilistic)
+
+    (0,1)
+
+e) Reproduction
+    Determines reproduction properties
+    i. Food required (could consider ratio of food:offsprings)
+    ii. Birth chance
+
+f) Competition
+    Involves interaction with other creatures
