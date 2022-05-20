@@ -6,37 +6,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="dat.gui.min.js"></script>
 </head>
-<body>
+<body style="margin: 0;">
     <div class="row">
-        <div class="col" style="width:65%;float: left;">
-            <canvas id="world" style="margin: 5%;"></canvas>
-        </div>
-        <div class="col" style="width:30%;float: left;">
-            <button id="resetWorld">Reset World</button>
-            <!-- <button id="setupSim">Setup Run</button> -->
-            <button id="startSim">Start Run</button>
-            <br><br>
+        <canvas id="chart1" width="500" height="100"></canvas>
+    </div>
+    <div class="row" style="margin: 1%;">
+        <div class="col" style="width: 30%;float: left; margin: 20px;">
+            <!-- INIT PARAMS -->
 
-            <label>Population: </label><label id="currentPop">0</label>            
-            <br>
-            <label>Time Left: </label><label id="timeLeft">0</label>    
-            <br><br>
-            <label>Food: </label><input id="slideFood" type="range" min="10" max="300" value="100"> <label id="inpFood"></label> <br>     
-            <label>Init Speed: </label><input id="slideSpeed" type="range" min="1" max="20" value="10">  <label id="inpSpeed"></label>    <br> 
-            <label>Init Pop: </label><input id="slidePop" type="range" min="20" max="200" value="50"> <label id="inpPop"></label>   <br>   
-            <label>Init TTL: </label><input id="slideTTL" type="range" min="20" max="500" value="150"> <label id="inpTTL"></label>   <br>   
-            <br>
-            <label>Creature FOV: </label><input id="slideFOV" type="range" min="0" max="1.5" step="0.1" value="0.7"> <label id="inpFOV"></label> <br>
-            <label>Birth Prob: </label><input id="slideBirth" type="range" min="0" max="1" step="0.1" value="0.5"> <label id="inpBirth"></label> <br>
-            <br>
-            <button id="resetParams">Reset Params</button>
-            <br><br><br><br>
-            <canvas id="chart" width="300" height="200"></canvas>
+        </div>
+        <div class="col" style="width: 7%;float: left; margin: 20px;">
+            <button id="setupSim">New Sim</button><br>
+            <!-- <button id="clearSim">Clear Chart</button><br> -->
+            <button id="startSim">Start Sim</button><br>
+            <button id="startDaySim">Sim Day</button><br>
+        </div>
+        <div class="col" style="width: 35%;float: left;">
+            <canvas id="world"></canvas>
+
+        </div>
+        <div class="col" style="width: 20%;float: left;">
+            <canvas id="chart2" width="200" height="100"></canvas>
         </div>
     </div>
-    
 </body>
 <script src="main.js"></script>
-<!-- <script src="test.js"></script> -->
 </html>
+
+
+<style>
+    #gui1 { position: absolute; top: 45em; left: 20px }
+    #gui2 { position: absolute; top: 45em; left: 320px }
+</style>
