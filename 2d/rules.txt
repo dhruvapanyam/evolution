@@ -60,3 +60,34 @@ e) Reproduction
 
 f) Competition
     Involves interaction with other creatures
+
+
+
+
+
+
+
+
+
+
+
+
+
+TRAIT IDEAS:
+
+Environment variables: poison food, obstacles
+
+TERRAIN!
+
+
+SINGLE-CREATURE TRAITS: (without interaction)
+-------------------------------
+1. Hoarder: can store extra food (think of some disadvantage)
+2. Time of wake-up: "Early bird" & "Night owl" --------> waking up early, more food available; waking up at night, more stamina
+3. Metabolism (food ratios, etc): affects time for next day, or reproduction
+4. Selective diet
+
+
+INTERACTIVE TRAITS:
+-------------------------------
+1. Aggression: Likelihood of attacking a creature that has food

@@ -65,6 +65,7 @@ class Vec{
         return b.subC(this).angle()
     }
 }
+
 function randVec(l=1,ang=Math.random()*Math.PI*2){
     return new Vec(l*Math.cos(ang),l*Math.sin(ang))
 }
@@ -704,20 +705,6 @@ var gene_data = {
             }
         }
     },
-    // 'stamina':{
-    //     freq: 1,
-    //     props:{
-    //         speed: 4,
-    //         ttl: 1000
-    //     }
-    // },
-    // 'avg':{
-    //     freq: 0,
-    //     props:{
-    //         speed: 5,
-    //         ttl: 650
-    //     }
-    // }
 }
 
 var selected = []

@@ -1,0 +1,9 @@
+TO DO:
+
+
+1. speed up the bar graphs: keep track of prop stats as and when we delete and reproduce
+    so, we avoid counting each time.
+
+2. sidebar (next to world) for world params
+
+3. Feature view on left sidebar
