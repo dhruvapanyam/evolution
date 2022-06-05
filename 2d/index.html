@@ -5,39 +5,121 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="text/javascript" src="dat.gui.min.js"></script>
+            
+
 </head>
-<body style="margin: 0;">
-    <div class="row">
-        <canvas id="chart1" width="500" height="100"></canvas>
-    </div>
-    <div class="row" style="margin: 1%;">
-        <div class="col" style="width: 30%;float: left; margin: 20px;">
-            <!-- INIT PARAMS -->
+<body>
+    <div class="">
+        <div class="row">
+            <div class="col s4" style="background-color: rgba(220,220,220,0.5); padding-top: 20px;">
+                <ul id="settings-tab" class="tabs tabs-fixed-width tab-demo z-depth-1">
+                    <li class="tab"><a href="#test1">Setup View</a></li><br>
+                    <li class="tab"><a href="#test0">Feature View</a></li>
+                </ul>
+                <div id="test1" class="col s12">
+                    <div class="row" style="margin: 20px;">
+                    <div class="col s2"></div>
+                    <div class="col s4"><a class="waves-effect waves-light btn" id="save-preset"><i class="material-icons left" style="margin: 0;">save</i>&nbsp;save preset</a></div>
+                    <div class="col s4">
+                        <a class="waves-effect waves-light btn" id="load-preset"><i class="material-icons left" style="margin: 0;">upload</i>&nbsp;load preset</a>
+                        <input type="file" id="load-preset-file" style="display: none;">
+                    </div>
+                    <!-- <div class="col s3"><a class="waves-effect waves-light btn"><i class="material-icons left" style="margin: 0;">remove_circle</i>delete setup</a></div> -->
 
-        </div>
-        <div class="col" style="width: 7%;float: left; margin: 20px;">
-            <button id="setupSim">New Sim</button><br>
-            <!-- <button id="clearSim">Clear Chart</button><br> -->
-            <button id="startSim">Start Sim</button><br>
-            <button id="startDaySim">Sim Day</button><br>
-        </div>
-        <div class="col" style="width: 35%;float: left;">
-            <canvas id="world"></canvas>
+                    </div>
+                    <!-- <p>List of Genes:</p> -->
+                    <div class="row">
+                        <div class="col s4">
+                        <ul id="gene-list-sidebar" class="collection with-header">
+                        </ul>                               
+                            <div class="row">
+                            <div class="input-field col s10">
+                                <input id="new-gene-inp" type="text" placeholder="New Gene..." class="validate">
+                                <!-- <label for="last_name">New Gene</label> -->
+                                </div>
+                            <div class="col s2" style="margin-top: 20px;">
+                                <i class="material-icons" style="font-size: 30px; cursor: pointer;" onclick="addNewGene(document.getElementById('new-gene-inp').value)">add_circle_outline</i>
+                            </div>
+                        </div>
+                        </div>
+                        <div class="col s8" id="gene-props-sidebar" >
+                        </div>
+                        <br><br><br>
+                        
+                    </div>
+                    
+                                    
+                </div>
+                <div id="test0" class="col s12"><p>Test 5</p></div>
 
+                <div class="row" id="summary-div">
+                    <canvas id="summary-chart" style="background-color: rgb(250,250,250);"  width="200" height="80"></canvas>
+
+                </div>
+                <div class="row">
+                    <div class="col s5"><a class="waves-effect waves-light btn" onclick="W.setupNewSim()">setup world</a><span>&nbsp;&nbsp;&nbsp;&nbsp;---------------------></span></div>
+                    <div class="col s7">
+                        <div class="col s4"><a class="waves-effect waves-light btn" onclick="W.showDayProgress()">sim 1 day</a></div>
+                        <div class="col s4"><a class="waves-effect waves-light btn" onclick="W.startNewSim(20,1)">sim 20 days</a></div>
+                        <div class="col s4"><a class="waves-effect waves-light btn" onclick="W.startNewSim(100,1)">sim 100 days</a></div>
+                    </div>
+                    
+                </div>
+                <!-- <div class="divider"></div> -->
+            </div>
+            
+            <div class="col s8" id="top-section-div">
+                <div class="row">
+                    <div class="col s6">
+                        <div style="position: absolute;">
+                            <canvas id="world"></canvas>
+                        </div>
+                    </div>
+                    <div class="col s3"></div>
+                    <div class="col s3" id="prop-bars">
+                    <!-- <canvas id="chart2"></canvas> -->
+
+                    </div>
+                </div>
+                <div class="row" id="bottom-section" style="margin-top: 5%;">
+                    <canvas id="chart1" width="200" height="50"></canvas>
+                </div>
+            </div>
         </div>
-        <div class="col" style="width: 20%;float: left;">
-            <canvas id="chart2" width="200" height="100"></canvas>
-        </div>
+        
     </div>
-    <div id="testing"></div>
+    
 </body>
-<script src="main.js"></script>
+<script src="helper.js"></script>
+<script src="sim.js"></script>
+<script src="layout.js"></script>
+<!-- <script src="combined.js"></script> -->
 </html>
 
-
 <style>
-    #gui1 { position: absolute; top: 45em; left: 20px }
-    #gui2 { position: absolute; top: 45em; left: 320px }
+
+.bord{
+    border: 1px solid;
+}
+
+.range-field{
+    margin: 0;
+}
+
+.row{
+    margin: 0;
+}
+
 </style>
+
+<script>
+
+var instance = M.Tabs.init(document.getElementById('settings-tab'), {});
+
+</script>
