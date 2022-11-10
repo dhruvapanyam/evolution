@@ -1,6 +1,6 @@
 
 const world = document.getElementById('world')
-let world_ht = 0.65
+let world_ht = 0.6
 world.width = window.innerHeight * world_ht
 world.height = world.width
 
@@ -153,6 +153,8 @@ class World {
         this.day = 0
 
         this.update_period = 1
+
+        this.running = false;
     }
 
     drawWorld = (c) => {
@@ -264,7 +266,7 @@ class World {
         pop1.update()
 
         if(this.day % this.update_period) return;
-        console.log('updating chart on day:',this.day)
+        // console.log('updating chart on day:',this.day)
         for(let f in prop_bars){
             let d = {}
             // console.log(f)
@@ -342,7 +344,8 @@ class World {
         }
         i=0;
         let tot = this.params.init_pop;
-        let tokens = Object.values(this.genes).map(g=>g.props.pop.value).reduce((x,y)=>x+y);
+        // now: generate population based on token system (G1=3, G2=4) --> (3/7, 4/7)
+        let tokens = Object.values(this.genes).map(g=>g.props.pop.value).reduce((x,y)=>x+y); // sum of all tokens (ratio of pop values)
         // console.log('tokens:',tokens)
         let j=0;
         for(let gene in this.genes){
@@ -353,7 +356,7 @@ class World {
                 this.creatures[this.creatureID] = new Creature(this.creatureID, this.getRandStartingPos(), gene, this.genes[gene].props, this.dim)
                 i++
             }
-            pop1.data.datasets[j].data.push(i)
+            pop1.data.datasets[j].data.push(i) // init pops
             j++
             
         }
@@ -367,6 +370,7 @@ class World {
         
 
         pop1.update()
+        this.updateChart()
 
         // let scount = Object.keys([...Array(maxSpeed)]).map(x=>0)
 
@@ -398,12 +402,13 @@ class World {
         this.update_period = parseInt(Math.sqrt(days)+1)
 
         let day=0;
+        this.running = true;
         let simulation = setInterval(()=>{
+            if(day==days || this.running == false) clearInterval(simulation)
             this.simDay()
             this.updateChart()
             // this.drawWorld(ctx)
             day++
-            if(day==days) clearInterval(simulation)
         },wait)        
     }
 
@@ -448,7 +453,8 @@ class World {
             }
         }
 
-        this.endDay(visual=visual)
+        if(this.running)
+            this.endDay(visual=visual)
 
         
     }
@@ -480,7 +486,7 @@ class World {
         if(single_day) pop1.data.labels.push('Day '+this.day)
         if(draw) this.drawWorld(ctx)
         this.updateChart()
-        console.log('ended day')
+        // console.log('ended day')
     }
 
     showDayProgress = () => {
@@ -497,8 +503,10 @@ class World {
         // simulate next day
         console.log('Num awake:',this.awake.size)
 
+        this.running = true;
         let showDay = setInterval(()=>{
             this.drawWorld(ctx)
+            if(!this.running) console.log('reset')
             // move every awake creature
             for(let id of this.awake){
                 // if(id != 10) continue;
@@ -529,13 +537,30 @@ class World {
                     this.awake.delete(id)
                 }
             }
-            if(this.awake.size==0) {
-                // console.log('stopping day sim...')
-                this.endDay(true,false,true)
+            if(this.awake.size==0 || this.running==false) {
+                console.log('stopping day sim...')
+                if(this.running) this.endDay(true,false,true)
                 clearInterval(showDay)
             }
         },30)
 
+    }
+
+    resetSimulator = () => {
+        this.running = false;
+        for(let f of this.food.keys()){
+            this.food.delete(f);
+        }
+        for(let f of this.awake.keys()){
+            this.awake.delete(f);
+        }
+        
+        for(let c of Object.keys(this.creatures)){
+            this.creatures[c] = undefined;
+            delete this.creatures[c]
+        }
+        this.clearChart()
+        this.drawWorld(ctx);
     }
 
 
