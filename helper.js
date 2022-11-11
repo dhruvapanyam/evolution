@@ -126,6 +126,13 @@ var features = {
         mut_inc: 1,
         def_mut: 0.1
     },
+    'stamina': {
+        def_val: 3,
+        min: 1,
+        max: 10,
+        mut_inc: 1,
+        def_mut: 0.1
+    },
     'vision': {
         def_val: 30,
         min: 0,
@@ -208,33 +215,3 @@ for(let f in features){
     })
 }
 
-
-
-for(let f in prop_bars){
-    // let num_vals = parseInt((features[f].max-features[f].min)/features[f].mut_inc + 1)
-
-    // prop_bars[f].chart.data = {
-    //         labels: Object.keys([...Array(num_vals)]).map(x=> features[f].min + parseInt(x)*features[f].mut_inc),
-    //         datasets: [
-    //             {
-    //                 label: `${f} Tracking`,
-    //                 data: Object.keys([...Array((features[f].max-features[f].min)/features[f].mut_inc)]).map(x=>0),
-    //                 backgroundColor: Object.keys([...Array((features[f].max-features[f].min)/features[f].mut_inc)]).map(i=>{
-    //                     return 'rgb(255,'+String(255 - i*(255)/(num_vals-1))+',0)'
-    //                 })
-    //             }
-    //         ]
-    //     }
-    
-    // prop_bars[f].chart.options = {
-    //         scales:{
-    //             y:{
-    //                 beginAtZero: true
-    //             }
-    //         },
-    //         animation: false
-    // }
-
-
-    // visiongraph = prop_bars[f].chart
-}

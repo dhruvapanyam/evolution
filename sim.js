@@ -1,16 +1,21 @@
 
 const world = document.getElementById('world')
-let world_ht = 0.6
+let world_ht = 1
 world.width = window.innerHeight * world_ht
 world.height = world.width
 
-const ctx = world.getContext('2d')
 
-ctx.fillStyle = 'rgb(240,240,240)'
-ctx.beginPath()
-ctx.arc(world.width/2,world.height/2, world.width/2 * 0.95,0, Math.PI*2)
-ctx.fill()
+const ctx = world.getContext('2d',{willReadFrequently:true})
 
+
+const WP = new paintCanvas(world, ctx, {x:world.width, y:world.height}, {
+    terrains: ['media/terrains/grass.jpeg','media/terrains/stone.webp','media/terrains/wall.jpeg']
+})
+
+// ctx.fillStyle = 'rgb(240,240,240)'
+// ctx.beginPath()
+// ctx.arc(world.width/2,world.height/2, world.width/2 * 0.95,0, Math.PI*2)
+// ctx.fill()
 
 
 class Food {
@@ -309,6 +314,32 @@ class World {
         
     }
 
+    setGeneData = (graph, genes) => {
+        graph.data.datasets = []
+        for(let g of Object.keys(W.genes)){
+            W.genes[g] = undefined;
+            delete W.genes[g]
+        }
+        for(let i=0; i<genes.length; i++){
+            let gname = genes[i].gname;
+            W.genes[gname] = {
+                name: gname,
+                inUse: true,
+                color: changeOpacity(genes[i].col, 0.6),
+                props: genes[i].props
+            }
+
+            graph.data.datasets.push({
+                gene: gname,
+                label: gname,
+                data: Object.keys(W.genes[gname].props).map(p=>W.genes[gname].props[p].value / features[p].max),
+                backgroundColor: W.genes[gname].color
+            })
+        }
+        graph.update()
+        this.setupNewSim()
+    }
+
     setupNewSim = () => {
         // set world back to init
 
@@ -321,13 +352,12 @@ class World {
                 label: '#'+g,
                 data: [],
                 fill: true,
-                borderColor: cols[i],
-                backgroundColor: cols[i].slice(0,3)+'a'+cols[i].slice(3,cols[i].length-1)+','+String(opac)+')',
+                borderColor: changeOpacity(this.genes[g].color, 0.9),
+                backgroundColor: changeOpacity(this.genes[g].color, 0.4),
                 // opacity: 0.5
             })
             i++
         }
-        pop1.data.labels.push('Day 0')
 
 
         // this.food = new Set()
@@ -356,7 +386,7 @@ class World {
                 this.creatures[this.creatureID] = new Creature(this.creatureID, this.getRandStartingPos(), gene, this.genes[gene].props, this.dim)
                 i++
             }
-            pop1.data.datasets[j].data.push(i) // init pops
+            pop1.data.datasets[j].data.push(i-cur) // init pops
             j++
             
         }
@@ -568,8 +598,8 @@ class World {
 }
 
 
-const W = new World({
-    dim: {radius: 300, center: new Vec(0,0)},
-    init_food: 100,
-    init_pop: 100,
-})
+// const W = new World({
+//     dim: {radius: 300, center: new Vec(0,0)},
+//     init_food: 100,
+//     init_pop: 100,
+// })
