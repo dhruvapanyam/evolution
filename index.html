@@ -26,7 +26,7 @@
     .modal{width:75%;max-height: 100%;}
 </style>
 <body>
-    <!-- <div class="">
+    <!-- <div class="" style="display: none;">
         <div class="row">
             <div class="col s4" style="background-color: rgba(220,220,220,0.5); padding-top: 20px; display: none;">
                 <ul id="settings-tab" class="tabs tabs-fixed-width tab-demo z-depth-1">
@@ -91,11 +91,6 @@
             
             <div class="col s8" id="top-section-div">
                 <div class="row">
-                    <div class="col s6 offset-s1">
-                        <div>
-                            <canvas id="world"></canvas>
-                        </div>
-                    </div>
                     <div style="display: none;" class="col s2"></div>
                     <div style="display: none;" class="col s3" id="prop-bars">
                     <canvas id="chart2"></canvas>
@@ -109,29 +104,70 @@
         </div>
         
     </div> -->
-    <div class="row" style="border: 1px;">
-        <div style="float: left;">
-            <canvas id="terrain"></canvas>
+    
+    
+    <div id="site-main" class="row" style="border: 1px;">
+        <div id="left-info-bar">
+            <!-- <div class="row">
+                <div class="col s12">
+                  <ul class="tabs">
+                    <li class="tab col s3 info-gene-tab"><a href="#test11">Speedy</a></li>
+                  </ul>
+                </div>
+                <div id="test11" class="col s12">
+                    Average speed: X<br>
+                    Average stamina: Y<br>
+                    ...
+                </div>
+            </div> -->
+
+
+            <h4>Census</h4>
+            <div class="row" id="pop-line-container">
+                <canvas id="pop-line" width="100"></canvas>
+            </div>
+            <h4>Dominant Sub-species</h4>
+            <!-- <hr> -->
+            <div class="row" id="fittest-blobs-container">
+                <div id="fittest-1" class="col xl4 l12 fittest-container">
+                    
+                </div>
+
+                <div id="fittest-2" class="col xl4 l12 fittest-container">
+                    
+                </div>
+
+                <div id="fittest-3" class="col xl4 l12 fittest-container">
+                    
+                </div>
+
+            </div>
+    <button onclick="W.showDayProgress()">SIM 1</button>
+    <button onclick="W.startNewSim(20,1)">SIM 20</button>
+    <button onclick="W.startNewSim(100,1)">SIM 100</button>
+
+            <h4>Trait Trend</h4>
+            <div class="row" id="prop-bars-container">
+
+            </div>
         </div>
-        <div style="float: right;">
+        <div style="float: right; overflow: hidden;">
             <canvas id="world"></canvas>
         </div>
     </div>
 
     <div id="gene-modal" class="modal">
         <div class="modal-content">
-        <h4>Your population</h4>
+        <h4>&nbsp;Your population <div style="float:left;margin-top: 5px;"><span onclick="createNewGene()"><i class="material-icons" style="font-size: 30px;cursor: pointer;">add_box</i></span></div></h4>
         <div class="row">
             <div class="col s10" style="display: flex; justify-content: center;">
                 <div id="modal-imgs" style="float: left;">
                     
                 </div>
-                <div style="width: 150px; padding-top: 50px;padding-left: 30px;" >
-                    <span style="margin: 10%" onclick="createNewGene()"><i class="material-icons" style="font-size: 30px;cursor: pointer;">add_box</i></span>
-                </div>
             </div>
             <div class="col s2">
                 <canvas id="gene-pop-pie" ></canvas>
+                <br>
             </div>
         </div>
             
@@ -146,7 +182,7 @@
         </div>
 
         <div class="modal-footer">
-        <a href="#!" onclick="formatWorldGenes(tempGeneData)" class="modal-close waves-effect waves-green btn-flat">Begin</a>
+        <a href="#!" onclick="formatWorldGenes(tempGeneData); document.getElementById('site-main').style.display = 'block';" class="modal-close waves-effect waves-green btn-flat">Begin</a>
         </div>
     </div>
 
@@ -161,76 +197,160 @@
 <script src="paint.js"></script>
 <script src="sim.js"></script>
 <script src="layout.js"></script>
+<script src="graphs.js"></script>
 <!-- <script src="combined.js"></script> -->
 </html>
 
+
 <style>
 
-.bord{
-    border: 1px solid;
-}
+    .bord{
+        border: 1px solid;
+    }
+    
+    .range-field{
+        margin: 0;
+    }
+    
+    .row{
+        margin: 0;
+    }
+    .stats-col{
+        height: 150px;
+        /* display: flex;
+        justify-content: center; */
+    }
+    .stats-col-inner{
+        font-size: 17px;
+        margin-top: 10%;
+    }
+    .modal{
+        font-size: 25px;
+    }
+    .input-circle{
+        margin-left: -10px;
+        font-size: 25px;
+        /* color: rgba(255,80,0,0.4); */
+        cursor:pointer;
+    }
+    .input-circles{
+        margin-right: -40px;
+    }
+    .gene-info{
+        font-size: 20px;
+        /* margin-left: 3%; */
+        /* padding-right: 10%; */
+    }
+    .cent{
+        display: flex;
+        justify-content: center;
+    }
+    .color-choice{
+        font-size: 60px;
+        margin-left: -10px;
+        /* color:grey; */
+        cursor: pointer;
+    }
+    .square {
+      height: 30px;
+      width: 30px;
+      /* background-color: #555; */
+      border: 3px solid grey;
+      margin: 5px;
+      cursor: pointer;
+    }
+    
+    #left-info-bar{
+        border: 2px solid;
+        float: left;
+        overflow: auto;
+    }
 
-.range-field{
-    margin: 0;
-}
+    .info-gene-tab{
+        height: 100%;
+        margin: auto;
+    }
+    
 
-.row{
-    margin: 0;
-}
-.stats-col{
-    height: 150px;
-    /* display: flex;
-    justify-content: center; */
-}
-.stats-col-inner{
-    font-size: 17px;
-    margin-top: 10%;
-}
-.modal{
-    font-size: 25px;
-}
-.input-circle{
-    margin-left: -10px;
-    font-size: 27px;
-    /* color: rgba(255,80,0,0.4); */
-    cursor:pointer;
-}
-.input-circles{
-    margin-right: -40px;
-}
-.gene-info{
-    font-size: 20px;
-    /* margin-left: 3%; */
-    /* padding-right: 10%; */
-}
-.cent{
-    display: flex;
-    justify-content: center;
-}
-.color-choice{
-    font-size: 60px;
-    margin-left: -10px;
-    /* color:grey; */
-    cursor: pointer;
-}
-.square {
-  height: 40px;
-  width: 40px;
-  /* background-color: #555; */
-  border: 3px solid grey;
-  margin: 5px;
-  cursor: pointer;
-}
+    .gene-info-icon{
+        padding-top: 20%;
+    }
 
-</style>
+    .prop-icon{
+        margin-right:6%;
+        /* padding-left: 5%; */
+    }
+
+    #fittest-1{
+        background-color: rgba(220, 192, 68, 0.5);
+    }
+    #fittest-2{
+        background-color: rgba(161, 161, 161, 0.5);
+    }
+    #fittest-3{
+        background-color: rgba(138, 89, 51, 0.5);
+    }
+
+    .fittest-blobs{
+        margin: 0 auto;
+        /* margin: 0; */
+    }
+    .fit-blob-props{
+        text-align: center;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .prop-category-icons{
+        width: 28%;
+        margin-left: 4%;
+        float: left;
+    }
+
+    .category-icons{
+        /* margin: 0; */
+        width: 100%;
+        /* position: relative; */
+        margin-top: 10%;
+    }
+
+    .cat-icon-img{
+        width: 35%;
+        float: left;
+        /* margin: 0; */
+    }
+
+    .cat-icon-value{
+        width: 65%;
+        float: left;
+        /* margin: 0; */
+    }
+
+    .fittest-pop{
+        font-size: 25px;
+    }
+
+    .prop-bar{
+        height: 100px;
+    }
+
+    
+    </style>
+
 
 <script>
 
+M.AutoInit()
+var modal = M.Modal.getInstance(document.getElementById('gene-modal'))
+// var modal = M.Modal.init(document.getElementById('gene-modal'), {});
+modal.open()
+createNewGene()
+// M.Tooltip.init(document.querySelectorAll('.tooltipped'),{})
+// M.Tabs.init(document.querySelectorAll('.tabs'),{})
+// var instance = M.Tabs.init(document.getElementById('settings-tab'), {});
 
-var modal = M.Modal.init(document.getElementById('gene-modal'), {});
-// modal.open()
-// createNewGene()
-M.Tooltip.init(document.querySelectorAll('.tooltipped'),{})
-var instance = M.Tabs.init(document.getElementById('settings-tab'), {});
+for(let icon of document.getElementsByClassName('info-gene-tab')){
+    icon.style.height = '100%';
+}
 
 </script>

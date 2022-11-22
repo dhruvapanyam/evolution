@@ -86,25 +86,6 @@ var simMetadata = {
 }
 
 
-var chart = document.getElementById('chart1')
-var pop1 = new Chart(chart, {
-    type: 'line',
-    data: {
-        labels: [],
-        datasets: []
-    },
-    options: {
-        scales: {
-            y: {
-                beginAtZero: true
-            }
-        },
-        animation: false
-    }
-})
-
-
-
 
 
 
@@ -112,47 +93,25 @@ var pop1 = new Chart(chart, {
 
 var features = {
     // default settings
-    'pop': {
-        def_val: 1,
-        min: 0,
-        max: 10,
-        mut_inc: 0,
-        def_mut: 0
-    },
     'speed': {
-        def_val: 3,
-        min: 1,
-        max: 10,
-        mut_inc: 1,
-        def_mut: 0.1
+        mut_inc: 0.5,
+        def_mut: 0.15
     },
     'stamina': {
-        def_val: 3,
-        min: 1,
-        max: 10,
         mut_inc: 1,
         def_mut: 0.1
     },
     'vision': {
-        def_val: 30,
-        min: 0,
-        max: 100,
-        mut_inc: 2,
+        mut_inc: 0.2,
         def_mut: 0.3
     },
     'gps': {
-        def_val: 0.7,
-        min: 0,
-        max: 1,
-        mut_inc: 0.05,
-        def_mut: 0.05
+        mut_inc: 0.5,
+        def_mut: 0.1
     },
     'greed': {
-        def_val: 0.5,
-        min: 0,
-        max: 1,
-        mut_inc: 0.05,
-        def_mut: 0.05
+        mut_inc: 0.5,
+        def_mut: 0.1
     },
 }
 
@@ -178,40 +137,3 @@ function download(content, fileName, contentType) {
     a.download = fileName;
     a.click();
 }
-
-
-
-
-
-var bars = document.getElementById('prop-bars')
-
-var prop_bars = {}
-
-var visiongraph;
-
-for(let f in features){
-    if(f=='pop') continue
-    bars.innerHTML += `<div class="row"><div class="col s12"><canvas id="${f}-bar" width="100" height:"50"></canvas></div></div>`
-}
-
-for(let f in features){
-    if(f=='pop') continue
-    let tempctx = document.getElementById(`${f}-bar`).getContext('2d')
-    // tempctx.fillRect(0,0,50,5)
-    let num_vals = parseInt((features[f].max-features[f].min)/features[f].mut_inc + 1)
-
-    prop_bars[f] = new Chart(tempctx,{
-        type:'bar',
-        data:{
-            labels: Object.keys([...Array(num_vals)]).map(x=>features[f].min + Math.round(100*parseInt(x)*features[f].mut_inc)/100),
-            datasets:[{
-                data:Object.keys([...Array(num_vals)]).map(x=>x),
-                label: `${f.toUpperCase()} tracking`,
-                backgroundColor: Object.keys([...Array(num_vals)]).map(i => {
-                    return 'rgb(255,'+String(255 - i*(255)/(num_vals-1))+',0)'
-                })
-            }]
-        }
-    })
-}
-

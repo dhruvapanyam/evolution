@@ -6,7 +6,7 @@
 
 class paintCanvas{
     constructor(canvas,ctx,size,params=null){
-        console.log('new paint canvas created!')
+        // console.log('new paint canvas created!')
         this.canvas = canvas
         this.canvas.width = size.x;
         this.canvas.height = size.y;
@@ -20,65 +20,50 @@ class paintCanvas{
 
         this.terrains = null;
         if(params) this.terrains = params.terrains;
-        console.log(this.terrains)
+        // console.log(this.terrains)
 
         this.patterns = []
-        this.patternSize = 70;
+        // this.patternRatio = 0.5;
         
         if(this.terrains != null){
             var pattern;
             for(let terrain of this.terrains){
                 let patternCanvas = document.createElement("canvas");
-                let patternContext = patternCanvas.getContext("2d");
-                patternCanvas.width = this.patternSize
-                patternCanvas.height = this.patternSize
+                
                 // // load image approach
                 const img = new Image();
                 // console.log('media/terrains/grass.jpeg')
-                img.src = terrain;
+                img.src = terrain.src;
                 img.onload = () => {
+                    let patternSize = Math.floor(img.width * terrain.ratio);
+                    patternCanvas.width = patternSize
+                    patternCanvas.height = patternSize
+
+                    // console.log(patternCanvas.width)
+
+                    let patternContext = patternCanvas.getContext("2d");
+
+                
                     let imgSize = img.width;
-                    patternContext.drawImage(img, 0,0, imgSize,imgSize,0,0,this.patternSize,this.patternSize)
+                    patternContext.drawImage(img, 0,0, imgSize,imgSize,0,0,patternSize,patternSize)
                     pattern = this.ctx.createPattern(patternCanvas, "repeat");
                     // pattern = this.ctx.createPattern(img, "repeat");
                     // console.log(img)
                     this.patterns.push({
                         pattern: pattern,
-                        img: patternContext.getImageData(0,0,this.patternSize,this.patternSize).data,
-                        size: this.patternSize
+                        img: patternContext.getImageData(0,0,patternSize,patternSize).data,
+                        size: patternSize
                     })
-                    console.log(this.patterns)
+                    // console.log(this.patterns)
                 };
             }
-            
-
-            // // canvas approach
-            
-            
-            // // Give the pattern a width and height of 50
-            // // patternCanvas.width = 50;
-            // // patternCanvas.height = 50;
-            // for(let image of this.terrains){
-            //     image.addEventListener("load", (e) => {
-            //         console.log(image)
-            //         image.setAttribute('crossOrigin','')
-            //         patternContext.drawImage(image, 0,0)
-            //         pattern = this.ctx.createPattern(patternCanvas, "repeat");
-            //         this.patterns[image.src] = pattern;
-            //         // console.log(this.patterns)
-            //     });
-            // }
-            
-
-            
-            // pattern = ctx.createPattern(patternCanvas, "repeat");
 
         }
 
-        this.ctx.fillRect(0,0,this.sx,this.sy)
+        // this.ctx.fillRect(0,0,this.sx,this.sy)
         
 
-        this.mouseXY = {x:null,y:0}
+        this.newLine = true;
         this.mousedown = false
 
         
@@ -93,26 +78,16 @@ class paintCanvas{
                 this.drawing = !this.drawing;
                 if(this.drawing){
                     // unhover any regions
-                    this.hoverRegion(this.mouseXY)
+                    // this.hoverRegion(this.mouseXY)
                 }
                 else{
                     // find regions
                     this.findRegions(false)
-                    console.log(this.boundaryOfRegion)
+                    // console.log(this.boundaryOfRegion)
                 }
-            }
-            if(e.key == 'p'){
-                // paint regions using boundaries
-                this.paintRegions()
             }
             if(e.key == 'f'){
                 this.findRegions(true)
-            }
-            if(e.key == 'g'){
-                for(let reg of this.regions){
-                    this.ctx.fillStyle = `rgb(${Math.floor(Math.random()*255)},${Math.floor(Math.random()*255)},${Math.floor(Math.random()*255)})`
-                    this.ctx.fill(reg, 'nonzero')
-                }
             }
         })
 
@@ -123,8 +98,22 @@ class paintCanvas{
         this.pointsofRegion = {}
         this.boundaryOfRegion = {}
 
-        // this.findRegions();
+        this._worldContains = (crd) => {
+            return params.borderCheck(crd,this.canvas);
+        }
 
+        this.saveImage = () => {
+            this.savedImage = this.ctx.getImageData(0,0,this.sx,this.sy)
+        }
+        this.loadImage = () => {
+            this.ctx.putImageData(this.savedImage, 0,0);
+        }
+
+        this.saveImage();
+
+        this.paintTouchUps = () => {
+            // params.touchUps(this);
+        }
     }
 
     _getCanvasCoordinate = (e) => {
@@ -136,7 +125,8 @@ class paintCanvas{
             x: (e.clientX - rect.left) * scaleX,   // scale mouse coordinates after they have
             y: (e.clientY - rect.top) * scaleY     // been adjusted to be relative to element
         }
-        if(crd.x < 0 || crd.y < 0 || crd.x >= this.sx || crd.y >= this.sy) return null;
+        if(!this._worldContains(crd)) return null;
+        // if(crd.x < 0 || crd.y < 0 || crd.x >= this.sx || crd.y >= this.sy) return null;
         // console.log(rect,scaleX,scaleY,crd)
         return crd;
     }
@@ -155,7 +145,8 @@ class paintCanvas{
         // setting opacity
         var img = this.ctx.getImageData(0,0,this.sx,this.sy);
         for(let r in this.pointsofRegion){
-            let opac = (r == reg) ? 200 : 255;
+            
+            let opac = (r == reg) ? 210 : 255;
             for(let point of this.pointsofRegion[r]){
                 img.data[4*point + 3] = opac
             }
@@ -179,11 +170,10 @@ class paintCanvas{
         // else: user has just released the mouse
         // this.regions[this.regions.length-1].closePath();
         this.ctx.closePath()
-        this.ctx.beginPath()
+        // this.ctx.beginPath()
         this.mousedown = false;
 
-        this.mouseXY.x = null;
-        this.mouseXY.y = null;
+        this.newLine = true;
     }
 
     handleMouseMove = (e) => {
@@ -196,8 +186,11 @@ class paintCanvas{
         if(crd == null) return;
 
         if(this.mousedown && this.drawing){
-            if(this.mouseXY.x == null){
+            if(this.newLine){
+                this.newLine = false;
+                // console.log('resetting')
                 // this.regions[this.regions.length-1].moveTo(crd.x,crd.y)
+                this.ctx.beginPath()
                 this.ctx.moveTo(crd.x,crd.y)
             }
             else{
@@ -205,19 +198,19 @@ class paintCanvas{
                 this.ctx.lineTo(crd.x,crd.y)
                 // console.log(crd)
                 // this.ctx.stroke(this.regions[this.regions.length-1])
+
+                this.ctx.save()
+                this.ctx.strokeStyle = 'white'
                 this.ctx.stroke()
+                this.ctx.restore()
             }
             
             // this.ctx.stroke()
         }
 
         
-
-        this.mouseXY.x = crd.x
-        this.mouseXY.y = crd.y
+            
     }
-
-    draw = () => {this.drawing = true}
 
     setRegionOpacity = (reg, o) => {
         var img = this.ctx.getImageData(0,0,this.sx,this.sy);
@@ -232,7 +225,8 @@ class paintCanvas{
         let res = []
         for(let p=-1;p<=1;p++){
             for(let q=-1;q<=1;q++){
-                if(i+q < 0 || i+q > this.sy || j+p < 0 || j+p > this.sx) continue
+                if(!this._worldContains({x:j+p, y:i+q})) continue;
+                // if(i+q < 0 || i+q > this.sy || j+p < 0 || j+p > this.sx) continue
                 res.push([i+q,j+p])
             }
         }
@@ -264,7 +258,7 @@ class paintCanvas{
             delete this.pointsofRegion[r]
         }
         
-        console.log(img.data.length/4)
+        // console.log(img.data.length/4)
         
 
         let Q = []
@@ -273,6 +267,7 @@ class paintCanvas{
         
         for(let i=0; i<=this.sy; i+=1){
             for(let j=0; j<=this.sx; j+=1){
+                if(!this._worldContains({x:j,y:i})) continue;
                 if(visited.has(i*this.sx + j)) continue;
                 if(this._isBoundary(i,j,img)) continue;
 
@@ -324,112 +319,15 @@ class paintCanvas{
             }
         }
         console.log(`Found ${num_regions} different regions!`)
-        if(paint) this.ctx.putImageData(img,0,0)
+        if(paint) this.paint(img);
 
-        
+        this.saveImage()
     }
 
-    paintRegions = () => {
-        var img = this.ctx.getImageData(0,0,this.sx,this.sy)
-        
-        // since boundary points are not continuous, the shape formed will not be whole (convex)
-        // so, we start at some point and check its neighbouring pixels to see if there is another boundary point that we know
-        // it's a region, so we're guaranteed to find them
-        // solution: do DFS from the starting point, and only look at boundary points (white)
-
-        // let data = this.boundaryOfRegion[reg];
-        // data.sort(function(a,b){
-        //     if(a[0]<b[0]) return 1;
-        //     if(a[0]>b[0]) return -1;
-        //     if(a[1]<b[1]) return 1;
-        //     if(a[1]>b[1]) return -1;
-        // })
-        // for(let p of data) console.log(p)
-
-        for(let reg=2; reg<=Object.keys(this.boundaryOfRegion).length; reg++){
-
-            let boundSet = new Set(this.boundaryOfRegion[reg].map(p => p[0]*this.sx + p[1]))
-            let Q = []
-            let visited = new Set()
-            let waiting = new Set()
-
-            let sorted = []
-
-            Q.push(this.boundaryOfRegion[reg][0])
-            this.ctx.beginPath()
-            let curblue = 1;
-
-            this.ctx.fillStyle = 'rgba(0,0,255,1)'
-            this.ctx.arc(Q[0][1],Q[0][0],3,0,Math.PI*2)
-            this.ctx.fill()
-            this.ctx.fillStyle = `rgb(${Math.floor(Math.random()*255)},${Math.floor(Math.random()*255)},${Math.floor(Math.random()*255)})`
-
-            let temporder = []
-
-            while(Q.length > 0){
-                let node = Q.pop()
-                let i = node[0]
-                let j = node[1]
-                // console.log(`Processing node ${node}`)
-                temporder.push(node)
-                visited.add(i*this.sx + j)
-                waiting.delete(i*this.sx + j)
-
-                if(boundSet.has(i*this.sx + j)){
-                    // this.ctx.beginPath()
-                    curblue -= 0.01
-                    if(curblue<0) curblue = 1
-                    // this.ctx.fillStyle = `rgba(0,0,255,${curblue})`;
-                    // this.ctx.arc(j,i,1,0,Math.PI*2)
-                    // this.ctx.fill()
-                    
-                    sorted.push(node)
-                    // console.log('added',node)
-                }
-
-                for(let e of this._edges(i,j)){
-                    // console.log(e)
-                    if(!this._isBoundary(e[0],e[1],img)) continue; // must be a boundary point
-                    if(visited.has(e[0]*this.sx + e[1]) || waiting.has(e[0]*this.sx + e[1])) continue;
-                    waiting.add(e[0]*this.sx + e[1])
-                    Q.push(e)
-                }
-            }
-            console.log(`Done! Elements found: (${sorted.length}/${boundSet.size})`)
-            let fillpath = new Path2D()
-            fillpath.moveTo(sorted[0][1],sorted[0][0])
-            setInterval(()=>{
-                let cur = temporder.shift();
-                this.ctx.beginPath()
-                this.ctx.fillStyle = 'green'
-                this.ctx.arc(cur[1],cur[0],1,0,Math.PI*2)
-                this.ctx.fill()
-                // fillpath.lineTo(cur[1],cur[0])
-                // this.ctx.strokeStyle = 'green'
-                // this.ctx.stroke(fillpath)
-            },50)
-            for(let i=0;i<sorted.length;i++){
-                
-            }
-            fillpath.closePath()
-            this.ctx.fillStyle = 'red'
-            // this.ctx.fill(fillpath,'nonzero')
-        }
-        
+    paint = (img) => {
+        this.ctx.putImageData(img,0,0);
+        this.paintTouchUps();
     }
-
-    checkVal = () => {
-        let img = this.ctx.getImageData(0,0,this.sx,this.sy);
-        for(let i=0;i<this.sy;i+=1){
-            for(let j=0;j<this.sx;j+=1){
-                let p=i
-                let q=j
-                let v = (img.data[4*(p*this.sx+q)]+img.data[4*(p*this.sx+q)+1]+img.data[4*(p*this.sx+q)+2])
-                if(v) console.log(v)
-            }
-        }
-    }
-
 
 }
 

@@ -1,53 +1,3 @@
-var topsec = document.getElementById('top-section-div')
-var botsec = document.getElementById('bottom-section')
-// var sidesec = document.getElementById('side-section')
-let topsec_ht = 0.7
-topsec.style.height = String(window.innerHeight * topsec_ht)+'px'
-// botsec.style.marginTop = String(window.innerHeight * 0.4)+'px'
-botsec.style.height = String(window.innerHeight * 0.25)+'px'
-
-window.addEventListener('resize',e=>{
-    topsec.style.height = String(window.innerHeight * topsec_ht)+'px'
-    botsec.style.height = String(window.innerHeight * 0.25)+'px'
-    // world.width = window.innerHeight * world_ht
-    // world.height = world.width
-})
-
-
-const sumChart = document.getElementById('summary-chart').getContext('2d')
-// sumChart.fillRect(0,0,document.getElementById('summary-chart').width,document.getElementById('summary-chart').height)
-
-const sumbar = new Chart(sumChart, {
-    type:'bar',
-    data: {
-        labels: [],
-        datasets:[]
-    },
-    options: {
-        plugins: {
-            title: {
-                display: true,
-                text: 'Preset Init Summary'
-            }
-        },
-        yAxes: [{
-            ticks: {
-              min: 0,
-              max: 1,
-        
-              // forces step size to be 5 units
-              stepSize: 0.1 // <----- This prop sets the stepSize
-            }
-          }]
-    }
-})
-
-sumbar.data.labels = Object.keys(features)
-sumbar.update()
-
-
-
-
 let propNames = ['speed','stamina','vision','gps','greed']
 
 var geneId = 0
@@ -55,14 +5,32 @@ var tempGeneData = []
 var activeGeneImg = 0
 const maxTokens = 30;
 
-let tcols = ['rgba(223,135,97,0.4)','rgba(151,145,234,0.4)','rgba(57,176,93,0.4)','rgba(242,125,138,0.4)','rgba(99,158,222,0.4)']
-let hue_rots = [0,230,460,690,920]
+let gcols = {
+    'orange':'rgb(223,135,97,1)',
+    'blue':'rgb(64,170,216,1)',
+    'green':'rgb(92,161,96,1)',
+    'purple':'rgb(151,136,239,1)',
+    'yellow':'rgb(208,168,41,1)',
+    'pink':'rgb(231,132,161,1)',
+    'grey':'rgb(154,154,154,1)',
+}
+var gcol_names = Object.keys(gcols)
+
+// let tcols = ['rgba(223,135,97,0.4)','rgba(151,145,234,0.4)','rgba(57,176,93,0.4)','rgba(242,125,138,0.4)','rgba(99,158,222,0.4)']
+// let hue_rots = [0,230,460,690,920]
 
 function createNewGene(){
     if(tempGeneData.filter(g=>g.active).length==5) return;
     let mod = document.getElementById('modal-imgs');
-    mod.innerHTML += `<div id="gene-img-container-${tempGeneData.length}" style="float:left;margin-left:20px"><img id="gene-imgs-${tempGeneData.length}" src="media/spot.png" width="150px" style="
-    filter: hue-rotate(${hue_rots[tempGeneData.length % 5]}deg);" onmousedown="selectGeneImg(${tempGeneData.length})"></div>`
+    let col = gcol_names[tempGeneData.length % gcol_names.length]
+    mod.innerHTML += `<div 
+                        id="gene-img-container-${tempGeneData.length}" 
+                        style="float:left;margin-left:20px"
+                    >
+                    <img 
+                        id="gene-imgs-${tempGeneData.length}" 
+                        src="media/blobs/${col}.png" width="150px" 
+                        onmousedown="selectGeneImg(${tempGeneData.length})"></div>`
     tempGeneData.push(
         {
             props:{}, 
@@ -72,14 +40,15 @@ function createNewGene(){
             active: true
         }
     )
+    
     let n = tempGeneData.length-1;
-    tempGeneData[n].col = n;
+    tempGeneData[n].col = col;
     createGeneStatsCol(n)
     selectGeneImg(n)
 
     popPie.data.labels.push(tempGeneData[n].gname)
     popPie.data.datasets[0].data.push(10)
-    popPie.data.datasets[0].backgroundColor.push(changeOpacity(tcols[n%5],0.7))
+    popPie.data.datasets[0].backgroundColor.push(changeOpacity(gcols[col],0.7))
     popPie.update()
     calculateInitPop()
 }
@@ -113,9 +82,12 @@ function createGeneStatsCol(n){
         let s = `
         
                 <div class="row">
-                    <div class="col s3" style="cursor:pointer;" id="prop-name-${f}-${n}" onclick="setMutation(${n},'${f}','${fname}')"><b>${fname}</b></div>
-                    <div class="col s8">
-                        <div class="input-circles input-circles-${n}" style="color:${tcols[n%5]};">
+                    <div class="col s4" style="cursor:pointer;" onclick="setMutation(${n},'${f}','${fname}')">
+                    <div style="float:left;" class="prop-icon"><img class="icon-img" src="media/icons/${f}.png" width="25"></div>
+                    <div style="float:left;" id="prop-name-${f}-${n}"><b>${fname}</b></div>
+                    </div>
+                    <div class="col s7">
+                        <div class="input-circles input-circles-${n}" style="color:${gcols[tempGeneData[n].col]};">
                             <i id="${f}-stat-inp-${n}-0" class="material-icons input-circle" onmousedown="setGenePropScore(${n},'${f}',1)">fiber_manual_record</i>
                             <i id="${f}-stat-inp-${n}-1" class="material-icons input-circle" onmousedown="setGenePropScore(${n},'${f}',2)">fiber_manual_record</i>
                             <i id="${f}-stat-inp-${n}-2" class="material-icons input-circle" onmousedown="setGenePropScore(${n},'${f}',3)">fiber_manual_record</i>
@@ -168,9 +140,10 @@ function createGeneStatsCol(n){
 
     let r = document.getElementById('gene-info-div');
     let colstr = ``
-    for(let i=0;i<5;i++){
+    for(let i=0;i<gcol_names.length;i++){
+        let col = gcol_names[i]
         colstr += `
-            <div id="${n}-color-choice-${i}" class="square" style="background-color:${changeOpacity(tcols[i%5],1)}" onclick="setGeneColor(${n},${i})"></div>
+            <div id="${n}-color-choice-${i}" class="square" style="background-color:${changeOpacity(gcols[col],1)}" onclick="setGeneColor(${n},'${col}')"></div>
         `
     }
     r.innerHTML += `
@@ -184,7 +157,7 @@ function createGeneStatsCol(n){
         <div class="col s4 cent">
             <div class="">
                 Tokens left:&nbsp;&nbsp;<b id="tokens-left-${n}">30</b><br>
-                Shelf Life:&nbsp;&nbsp;<b id="shelf-life-${n}">100</b>&nbsp;mins<br>
+                Shelf Life:&nbsp;&nbsp;<b id="shelf-life-${n}"></b>&nbsp;timex<br>
                 Initial Ratio:&nbsp;&nbsp;<input oninput="setInitPop(${n},this.value)" style="width:40px" type="number" min=0 max=10 value=1>
             </div>
         </div>
@@ -204,10 +177,10 @@ function createGeneStatsCol(n){
 
 
     for(let f of propNames){
-        setGenePropScore(n,f,1)
+        setGenePropScore(n,f,5)
     }
 
-    setGeneColor(n,n)
+    setGeneColor(n,tempGeneData[n].col)
 }
 
 function changeGeneName(n,v){
@@ -224,13 +197,14 @@ function setInitPop(n,v){
 function setGeneColor(n,c){
     tempGeneData[n].col = c;
     // console.log('setting',n,c)
-    for(let i=0;i<5;i++){
-        document.getElementById(`${n}-color-choice-${i}`).style.width = (i==c) ? '50px' : '40px'
-        document.getElementById(`${n}-color-choice-${i}`).style.height = (i==c) ? '50px' : '40px'
+    for(let i=0;i<gcol_names.length;i++){
+        let temp = gcol_names[i]
+        document.getElementById(`${n}-color-choice-${i}`).style.width = (temp==c) ? '40px' : '30px'
+        document.getElementById(`${n}-color-choice-${i}`).style.height = (temp==c) ? '40px' : '30px'
     }
-    popPie.data.datasets[0].backgroundColor[n] = changeOpacity(tcols[c%5],0.7)
+    document.getElementById(`gene-imgs-${n}`).src = `media/blobs/${c}.png`;
+    popPie.data.datasets[0].backgroundColor[n] = changeOpacity(gcols[c],0.7)
     popPie.update()
-    document.getElementById('gene-imgs-'+n).style.filter = `hue-rotate(${hue_rots[c%5]}deg)`
     for(let f of propNames){
         setGenePropScore(n,f,tempGeneData[n].props[f].value)
     }
@@ -254,23 +228,30 @@ function setGenePropScore(n,f,v){
     let usedTokens = 0
     for(let ff in tempGeneData[n].props){
         if(f==ff) continue
-        console.log(ff,tempGeneData[n].props[ff])
+        // console.log(ff,tempGeneData[n].props[ff])
         usedTokens += tempGeneData[n].props[ff].value
     }
     // tempGeneData[n].tokens_used = usedTokens;
-    console.log(v,maxTokens,usedTokens)
+    // console.log(v,maxTokens,usedTokens)
     v = Math.min(v, maxTokens-usedTokens);
-    if(f in tempGeneData[n].props)
+    if(f in tempGeneData[n].props){
+        if(tempGeneData[n].props[f].value == 1 && v == 1) v=0;
         tempGeneData[n].props[f].value = v;
+    }
     else
         tempGeneData[n].props[f] = {value: v, mutation: false}
 
+    let col = gcols[tempGeneData[n].col];
     for(let i=0;i<10;i++){
-        document.getElementById(`${f}-stat-inp-${n}-${i}`).style.color = (i<v) ? changeOpacity(tcols[tempGeneData[n].col%5],0.9) : tcols[tempGeneData[n].col%5]
+        document.getElementById(`${f}-stat-inp-${n}-${i}`).style.color = (i<v) ? changeOpacity(col,0.9) : changeOpacity(col,0.4)
     }
     document.getElementById(`${f}-stat-val-${n}`).innerHTML = v
     let res = (maxTokens - usedTokens - v)
     document.getElementById(`tokens-left-${n}`).innerHTML = res
+
+    if(f == 'stamina'){
+        document.getElementById(`shelf-life-${n}`).innerHTML = 100 + (10 * v)
+    }
 }
 
 function deleteGene(n){
@@ -328,25 +309,137 @@ const popPie = new Chart(
 
 
 function formatWorldGenes(genes){
-    W.setGeneData(sumbar, genes.filter(g => g.active).map(g => {
-        let props = {
-            'pop': {
-                value: g.init_pop,
-                mutation_chance: 0
-            }
-        }
+    W.setGeneData(null, genes.filter(g => g.active).map(g => {
+        let props = {}
         for(let f in g.props){
             props[f] = {
-                value: parseFloat(g.props[f].value) * features[f].max / 10,
+                value: parseFloat(g.props[f].value),
                 mutation_chance: (g.props[f].mutation) ? parseFloat(features[f].def_mut) : 0
             }
         }
-        console.log(props)
+        // console.log(props)
         return {
             gname: g.gname,
-            col: tcols[g.col % 5],
-            props: props
+            col: gcols[g.col],
+            img: `media/blob_draw/${g.col}.png`,
+            colorName: g.col,
+            props: props,
+            pop: parseInt(g.init_pop)
         }
     }))
 }
+
+function showDominant(pop_stats){
+    // propwise stats
+    // pop_stats = {'5-5-5-5-5': 42, ...}
+    // console.log(pop_stats, typeof pop_stats)
+
+    let fittest = Object.keys(pop_stats)
+    fittest.sort((a,b) => (pop_stats[b] - pop_stats[a]))
+    fittest = fittest.map(p => [p,pop_stats[p]])
+
+    let tot = 0;
+    for(let f of fittest) tot += f[1]
+    // alert(JSON.stringify(fittest))
+    // console.log(Object.keys(pop_stats))
+
+    let rank = 0;
+    while(rank < 3){
+        rank += 1
+        let fx = document.getElementById(`fittest-${rank}`);
+        let i = rank-1;
+
+        if(i >= fittest.length){
+            fx.innerHTML = ''
+            fx.style.height = document.getElementById('fittest-1').style.height
+            return;
+        }
+        // alert(fittest[i])
+        let p = fittest[i][0].split('-')
+        let color = p[0];
+
+        p = p.slice(1).map(x=>parseInt(x))
+        let prop_vals = {};
+        for(let j=0;j<propNames.length;j++){
+            prop_vals[propNames[j]] = p[j]
+        }
+
+        let ht = 60
+        let martop = 20
+        let marbot =  0
+        fx.innerHTML = `
+        <div class="fittest-blobs">
+            <div class="row cent">
+                <img src="media/blobs/${color}.png" height="${ht}" style="margin-top: ${martop}px; margin-bottom: ${marbot}px">
+            </div>
+            <br>
+            <div class="row">
+                <div class="fit-blob-props">
+                    <div class="prop-category-icons">
+                        <div class="category-icons">
+                            <div class="cat-icon-img"><img class="icon-img" src="media/icons/speed.png" width="20"></div>
+                            <div class="cat-icon-value">${prop_vals['speed']}-${prop_vals['speed']+1}</div>
+                        </div>
+                        <br>
+                        <div class="category-icons">
+                            <div class="cat-icon-img"><img class="icon-img" src="media/icons/stamina.png" width="20"></div>
+                            <div class="cat-icon-value">${prop_vals['stamina']}-${prop_vals['stamina']+1}</div>
+                        </div>
+                    </div>
+                    <div class="prop-category-icons">
+                        <div class="category-icons">
+                            <div class="cat-icon-img"><img class="icon-img" src="media/icons/vision.png" width="20"></div>
+                            <div class="cat-icon-value">${prop_vals['vision']}-${prop_vals['vision']+1}</div>
+                        </div>
+                        <br>
+                        <div class="category-icons">
+                            <div class="cat-icon-img"><img class="icon-img" src="media/icons/gps.png" width="20"></div>
+                            <div class="cat-icon-value">${prop_vals['gps']}-${prop_vals['gps']+1}</div>
+                        </div>
+                    </div>
+                    <div class="prop-category-icons">
+                        <div class="category-icons">
+                            <div class="cat-icon-img"><img class="icon-img" src="media/icons/greed.png" width="20"></div>
+                            <div class="cat-icon-value">${prop_vals['greed']}-${prop_vals['greed']+1}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div class="row cent fittest-pop">
+                ${Math.round(fittest[i][1] * 100 / tot) / 1}% (${fittest[i][1]})
+            </div>
+        </div>
+    
+    `
+
+
+
+    }
+
+    
+}
+
+// showDominant()
+
+window.addEventListener('resize', e => {
+    resizeDOMs();
+})
+
+
+const resizeDOMs = () => {
+    W.resize(window.innerHeight);
+
+    // left info bar
+    let leftBar = document.getElementById('left-info-bar');
+    leftBar.style.width = `${window.innerWidth - window.innerHeight}px`;
+    leftBar.style.height = `${window.innerHeight}px`
+
+    // pop-line bar
+    let popline = document.getElementById('pop-line-container');
+    popline.style.height = `${window.innerHeight * 0.14}px`
+    popline.style.width = '100%'
+}
+resizeDOMs();
+
 
