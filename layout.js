@@ -432,7 +432,7 @@ const resizeDOMs = () => {
 
     // left info bar
     let leftBar = document.getElementById('left-info-bar');
-    leftBar.style.width = `${window.innerWidth - window.innerHeight}px`;
+    leftBar.style.width = `${0.95*(window.innerWidth - window.innerHeight)}px`;
     leftBar.style.height = `${window.innerHeight}px`
 
     // pop-line bar
