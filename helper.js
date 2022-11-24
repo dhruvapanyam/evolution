@@ -129,6 +129,18 @@ function changeOpacity(col,o){
     }
 }
 
+function lastItem(arr){
+    return arr[arr.length-1];
+}
+
+function caps(str){
+    return str[0].toUpperCase() + str.substring(1).toLowerCase()
+}
+
+function capsAll(str){
+    return str.toUpperCase()
+}
+
 
 function download(content, fileName, contentType) {
     var a = document.createElement("a");

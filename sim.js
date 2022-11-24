@@ -10,7 +10,7 @@ const ctx = world.getContext('2d',{willReadFrequently:true})
 
 
 class Food {
-    constructor(id,pos,size=2,col='red'){
+    constructor(id,pos,size=2,col='yellow'){
         this.id = id
         this.pos = pos;
         this.size = size;
@@ -192,14 +192,25 @@ class World {
         this.drawTimer()
     }
 
+    resetPainter = () => {
+        this.painter.reset();
+    }
+
+    setDraw = (v) => {
+        if(this.running) return;
+        this.painter.setDraw(v)
+    }
+
+    setFill = (v) => {
+        if(this.running) return;
+        this.painter.setFill(v)
+    }
+
     drawWorld = () => {
         let scale = this.canvas.width/2 * 0.95 / this.dim.radius
 
         let c = this.ctx;
-        c.fillStyle = 'white'
-        c.fillRect(0,0,this.canvas.width,this.canvas.height)
-
-        this.painter.loadImage();
+        this.painter.reset();
 
         c.strokeStyle = 'black'
         c.beginPath()
@@ -250,7 +261,7 @@ class World {
 
             
 
-            c.fillStyle = 'rgba(150,150,150,0.1)'
+            c.fillStyle = 'rgba(150,150,150,0.3)'
             c.beginPath()
             c.arc(this.canvas.width/2 + f.pos.x*scale, this.canvas.height/2 + f.pos.y*scale,f.props.vision.value*10*scale,f.ang-f.fov,f.ang+f.fov)
             c.lineTo(this.canvas.width/2 + f.pos.x*scale, this.canvas.height/2 + f.pos.y*scale)
@@ -303,6 +314,12 @@ class World {
 
     placeFood = (num_food) => {
         for(let i=0;i<num_food;i++){
+            // let x=-1,y=-1;
+            // do{
+            //     x = Math.random() * this.canvas.width;
+            //     y = Math.random() * this.canvas.height;
+            // } while(this.painter._worldContains({x:x-this.canvas}))
+
             let d = Math.random()*this.dim.radius
             let a = Math.random()*Math.PI*2
             this.food.add(new Food(i, new Vec(Math.cos(a)*d,Math.sin(a)*d)))
@@ -310,30 +327,61 @@ class World {
     }
 
 
-    setGeneData = (graph, genes) => {
-        for(let i=0; i<genes.length; i++){
-            let gname = genes[i].gname;
-            this.genes[gname] = {
-                name: gname,
-                inUse: true,
-                color: changeOpacity(genes[i].col, 0.6),
-                img: genes[i].img,
-                colorName: genes[i].colorName,
-                props: genes[i].props,
-                pop: genes[i].pop
-            }
+    setGeneData = (genes) => {
+        popLine.data.labels = []
+        popLine.data.datasets = []
+        for(let gname in genes){
+            this.genes[gname] = {...genes[gname]}
 
             popLine.data.datasets.push({
                 data: [],
                 label: gname,
-                borderColor: changeOpacity(genes[i].col, 0.8),
+                borderColor: changeOpacity(genes[gname].color, 0.8),
                 pointBorderWidth: 1,
-                backgroundColor: changeOpacity(genes[i].col, 0.4)
+                backgroundColor: changeOpacity(genes[gname].color, 0.4)
             })
         }
-        // this.painter.findRegions(true)
+ 
         this._loadBlobs();
-        this.setupNewSim()
+        this.setupNewSim();
+        showGeneData();
+
+    }
+
+    saveGeneData = () => {
+        download(JSON.stringify(this.genes), 'genes.txt', 'text');
+    }
+
+    loadGeneData = () => {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = e => { 
+
+            // getting a hold of the file reference
+            var file = e.target.files[0]; 
+         
+            // setting up the reader
+            var reader = new FileReader();
+            reader.readAsText(file,'UTF-8');
+         
+            // here we tell the reader what to do when it's done reading...
+            reader.onload = readerEvent => {
+               var content = readerEvent.target.result; // this is the content!
+            //    console.log( content );
+                var gene_data = JSON.parse(content);
+                this.setGeneData(gene_data)
+            }
+         
+        }
+         
+        //  input.click();
+
+        var gene_data = JSON.parse(
+            `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(223,135,97,0.6)","img":"media/blob_draw/orange.png","colorName":"orange","props":{"speed":{"value":5,"mutation_chance":0},"stamina":{"value":5,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0},"gps":{"value":5,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1},"Gene2":{"name":"Gene2","inUse":true,"color":"rgb(64,170,216,0.6)","img":"media/blob_draw/blue.png","colorName":"blue","props":{"speed":{"value":8,"mutation_chance":0},"stamina":{"value":4,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0.3},"gps":{"value":3,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1}}`
+        )
+        this.setGeneData(gene_data);
+
+        
     }
 
     setupStats = () => {
@@ -387,7 +435,8 @@ class World {
     }
 
     newDayStats = () => {
-        popLine.data.labels.push(`T+${this.day}`)
+        if(this.day != popLine.data.labels.length-1)
+            popLine.data.labels.push(`T+${this.day}`)
         this.calculateStats()
         let i=0;
         for(let g in this.genes){
@@ -485,10 +534,12 @@ class World {
         this.time = 0
 
         // this.setupStats();
+        this.running = false;
         // this.calculateStats()
         this.newDayStats();
         this.findDominant();
 
+        this.resetPainter()
     }
 
     startNewSim = (days, wait=10, food_change=(f)=>f) => {
@@ -600,6 +651,8 @@ class World {
     }
 
     showDayProgress = () => {
+
+
         this.update_period = 1
         // let maxD = 8    // distance to food
         let maxF = 2    // max food capacity
@@ -711,12 +764,15 @@ const W = new World({
         touchUps: (painter) => {
             console.log(painter.ctx.strokeStyle)
             painter.ctx.save();
+            painter.ctx.fillStyle = 'rgb(200,200,200)'
+            painter.ctx.fillRect(0,0,painter.canvas.width,painter.canvas.height);
             painter.ctx.beginPath();
             painter.ctx.strokeStyle = 'black'
             painter.ctx.lineWidth = 5
-            painter.ctx.arc(painter.canvas.width/2,painter.canvas.height/2,painter.canvas.width/2-2.5,0,Math.PI*2);
+            painter.ctx.arc(painter.canvas.width/2+1,painter.canvas.height/2+1,painter.canvas.width/2 * 0.95 + 2.2,0,Math.PI*2);
             console.log(painter.ctx.strokeStyle)
             painter.ctx.stroke();
+            painter.ctx.closePath();
             // console.log('done')
             painter.ctx.restore();
         }

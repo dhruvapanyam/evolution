@@ -210,8 +210,12 @@ function setGeneColor(n,c){
     }
 }
 
-function setMutation(n,f,fname){
-    let v = !tempGeneData[n].props[f].mutation
+function setMutation(n,f,fname,mut=null){
+    let v;
+    if(mut == null)
+        v = !tempGeneData[n].props[f].mutation
+    else
+        v = mut;
     tempGeneData[n].props[f].mutation = v
 
     let d = document.getElementById(`prop-name-${f}-${n}`)
@@ -309,7 +313,7 @@ const popPie = new Chart(
 
 
 function formatWorldGenes(genes){
-    W.setGeneData(null, genes.filter(g => g.active).map(g => {
+    let data = genes.filter(g => g.active).map(g => {
         let props = {}
         for(let f in g.props){
             props[f] = {
@@ -319,14 +323,23 @@ function formatWorldGenes(genes){
         }
         // console.log(props)
         return {
-            gname: g.gname,
-            col: gcols[g.col],
+            name: g.gname,
+            inUse: true,
+            color: changeOpacity(gcols[g.col],0.6),
             img: `media/blob_draw/${g.col}.png`,
             colorName: g.col,
             props: props,
             pop: parseInt(g.init_pop)
         }
-    }))
+    })
+    let gene_data = {}
+    for(let g of data){
+        gene_data[g.name] = g;
+    }
+
+    // console.log(gene_data)
+
+    W.setGeneData(gene_data)
 }
 
 function showDominant(pop_stats){
@@ -420,6 +433,114 @@ function showDominant(pop_stats){
     
 }
 
+function showGeneData(){
+
+    tempGeneData = []
+
+    let dom1 = document.getElementById('modal-imgs');
+    let dom2 = document.getElementById('modal-stats-div');
+    let dom3 = document.getElementById('gene-info-div');
+
+    dom1.innerHTML = ''
+    dom2.innerHTML = ''
+    dom3.innerHTML = ''
+
+    popPie.data.labels = []
+    popPie.data.datasets[0].data = []
+
+    let n=0;
+    for(let g in W.genes){
+        createNewGene()
+        changeGeneName(n,W.genes[g].name);
+        setInitPop(n,W.genes[g].pop);
+        setGeneColor(n,W.genes[g].colorName);
+        for(let f in W.genes[g].props){
+            let prop = W.genes[g].props[f];
+            let mut = (prop.mutation_chance > 0);
+            setMutation(n,f,(f!='gps')?(caps(f)):(capsAll(f)),mut)
+            setGenePropScore(n,f,prop.value)
+        }
+        selectGeneImg(n)
+        n++;
+    }
+
+
+    let dom = document.getElementById('mid-bar-genes');
+    dom.innerHTML = ''
+    console.log(W.genes)
+    for(let g in W.genes){
+        console.log(g)
+        dom.innerHTML += `
+            <div class="bar-btn cent">
+                <img class="bar-img cent" src="${W.genes[g].img}">
+            </div>
+        `
+    }
+}
+
+
+// Mid-bar buttons
+document.getElementById('play-day-btn').addEventListener('click',e => {
+    W.showDayProgress();
+})
+document.getElementById('sim-days-1-btn').addEventListener('click',e => {
+    W.startNewSim(1,1);
+})
+document.getElementById('sim-days-20-btn').addEventListener('click',e => {
+    W.startNewSim(20,1);
+})
+document.getElementById('sim-days-100-btn').addEventListener('click',e => {
+    W.startNewSim(100,1);
+})
+document.getElementById('edit-genes-btn').addEventListener('click',e => {
+    modal.open();
+})
+document.getElementById('save-genes-btn').addEventListener('click',e => {
+    W.saveGeneData()
+})
+document.getElementById('load-genes-btn').addEventListener('click',e => {
+    W.loadGeneData()
+})
+
+function selectTerrainIcon(id){
+    for(let dom of document.getElementsByClassName('terrain-img')){
+        if(id == dom.id){
+            dom.children[0].classList.add('selected-bar-img');
+            W.painter.selectTerrain(dom.children[0].src)
+        }
+        else{
+            dom.children[0].classList.remove('selected-bar-img')
+        }
+    }
+}
+
+document.getElementById('draw-world-btn').addEventListener('click',e => {
+    if(W.running) return;
+    document.getElementById('draw-world-btn').classList.add('selected-icon')
+    document.getElementById('fill-world-btn').classList.remove('selected-icon')
+    document.getElementById('terrain-img-icons').style.display = 'none'
+    W.setDraw(true)
+    W.setFill(false)
+})
+document.getElementById('fill-world-btn').addEventListener('click',e => {
+    if(W.running) return;
+    document.getElementById('fill-world-btn').classList.add('selected-icon')
+    document.getElementById('draw-world-btn').classList.remove('selected-icon')
+    document.getElementById('terrain-img-icons').style.display = 'block'
+    W.setDraw(false)
+    W.setFill(true)
+})
+
+document.getElementById('done-edit-world-btn').addEventListener('click', e => {
+    if(W.running) return;
+    document.getElementById('draw-world-btn').classList.remove('selected-icon')
+    document.getElementById('fill-world-btn').classList.remove('selected-icon')
+    document.getElementById('terrain-img-icons').style.display = 'none'
+    W.setDraw(false)
+    W.setFill(false)
+})
+
+
 // showDominant()
 
 window.addEventListener('resize', e => {
@@ -428,12 +549,30 @@ window.addEventListener('resize', e => {
 
 
 const resizeDOMs = () => {
-    W.resize(window.innerHeight);
+
+    let wid = window.innerWidth;
+    let ht = window.innerHeight;
+
+    // middle options bar
+    let midBar = document.getElementById('mid-options-bar');
+    let midBarW = 60;
+    midBar.style.width = `${midBarW}px`;
+    midBar.style.height = `${ht}px`
+
+    // top options bar
+    let topBar = document.getElementById('top-options-bar');
+    let topBarH = midBarW;
+    topBar.style.width = '100%';
+    topBar.style.height = `${topBarH}px`;
+
+    // world canvas
+    let worldW = ht - topBarH - 4
+    W.resize(worldW);
 
     // left info bar
     let leftBar = document.getElementById('left-info-bar');
-    leftBar.style.width = `${0.95*(window.innerWidth - window.innerHeight)}px`;
-    leftBar.style.height = `${window.innerHeight}px`
+    leftBar.style.width = `${(wid - worldW - midBarW)}px`;
+    leftBar.style.height = `${ht}px`
 
     // pop-line bar
     let popline = document.getElementById('pop-line-container');

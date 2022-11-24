@@ -50,14 +50,35 @@ class paintCanvas{
                     // pattern = this.ctx.createPattern(img, "repeat");
                     // console.log(img)
                     this.patterns.push({
+                        src: img.src,
                         pattern: pattern,
                         img: patternContext.getImageData(0,0,patternSize,patternSize).data,
                         size: patternSize
                     })
-                    // console.log(this.patterns)
+
+                    let dom = document.getElementById('terrain-img-icons');
+                    dom.innerHTML += `
+                        <div id="terrain-img-${img.src}" class="bar-btn cent fl terrain-img" onclick="selectTerrainIcon(this.id)">
+                            <img class="bar-img terrain-icon" src="${img.src}"> 
+                        </div>
+                    `
+                    // console.log(this.terrains[0].src,img.attributes.src.nodeValue,img)
+                    if(this.patterns.length == 1){
+                        document.getElementById(`terrain-img-${img.src}`).style.borderLeft = '1px solid rgb(152,152,152)'
+                    }
+                    if(this.patterns.length == this.terrains.length){
+                        document.getElementById(`terrain-img-${img.src}`).style.borderRight = '1px solid rgb(152,152,152)'
+                        // this.reset()
+                    }
                 };
             }
 
+        }
+
+        this.selectTerrain = (src) => {
+            let pat = this.patterns.filter(x=>x.src==src)
+            if(pat.length == 0) return;
+            this.selectedTerrain = pat[0];
         }
 
         // this.ctx.fillRect(0,0,this.sx,this.sy)
@@ -72,27 +93,18 @@ class paintCanvas{
         document.addEventListener('mouseup', this.handleMouseUp)
         document.addEventListener('mousemove', this.handleMouseMove)
 
-        document.addEventListener('keydown', e=>{
-            if(e.key == 'd'){
-                //toggle drawing
-                this.drawing = !this.drawing;
-                if(this.drawing){
-                    // unhover any regions
-                    // this.hoverRegion(this.mouseXY)
-                }
-                else{
-                    // find regions
-                    this.findRegions(false)
-                    // console.log(this.boundaryOfRegion)
-                }
-            }
-            if(e.key == 'f'){
-                this.findRegions(true)
-            }
-        })
 
         // this.regions = []
-        this.drawing = false
+        this.drawing = false;
+        this.filling = false;
+        this.setDraw = (v) => {
+            this.drawing = v
+        }
+        this.setFill = (v) => {
+            this.filling = v;
+            if(this.filling)
+                this.findRegions()
+        }
 
         this.regionOfPoint = {}
         this.pointsofRegion = {}
@@ -109,11 +121,21 @@ class paintCanvas{
             this.ctx.putImageData(this.savedImage, 0,0);
         }
 
-        this.saveImage();
 
         this.paintTouchUps = () => {
-            // params.touchUps(this);
+            params.touchUps(this);
         }
+        this.paintTouchUps()
+        this.saveImage();
+
+    }
+
+    reset = () => {
+        this.ctx.fillStyle = 'rgba(200,200,200,1)';
+        this.ctx.fillRect(0,0,this.sx,this.sy);
+        // this.saveImage();
+        this.loadImage()
+        // this.paintTouchUps()
     }
 
     _getCanvasCoordinate = (e) => {
@@ -133,6 +155,7 @@ class paintCanvas{
 
     hoverRegion = (e) => {
         let crd = this._getCanvasCoordinate(e)
+        // if(crd == null || !this._worldContains(crd)) return;
         // console.log(crd)
         let reg;
         if(crd == null){
@@ -141,14 +164,14 @@ class paintCanvas{
         else{
             reg = this.regionOfPoint[Math.floor(crd.y)*this.sx + Math.floor(crd.x)]
         }
+        // console.log(reg)
         
         // setting opacity
         var img = this.ctx.getImageData(0,0,this.sx,this.sy);
         for(let r in this.pointsofRegion){
-            
-            let opac = (r == reg) ? 210 : 255;
+            let opac = (r == reg) ? 1/1.1 : 1.1;
             for(let point of this.pointsofRegion[r]){
-                img.data[4*point + 3] = opac
+                img.data[4*point + 3] = Math.max(0,Math.min(255,opac*this.savedImage.data[4*point+3]))
             }
         }
         this.ctx.putImageData(img,0,0)
@@ -156,36 +179,35 @@ class paintCanvas{
 
     handleMouseDown = (e) => {
         if(this.mousedown) return;
-        if(!this.drawing) return;
-        // else: user has just pressed the mouse down
-        // create new region
-        // this.regions.push(new Path2D());
+        if(this.filling) {
+            this.paintRegion(e)
+        };
         this.mousedown = true;
-        // console.log(this.regions)
     }
 
     handleMouseUp = (e) => {
         if(!this.mousedown) return;
-        if(!this.drawing) return;
-        // else: user has just released the mouse
-        // this.regions[this.regions.length-1].closePath();
-        this.ctx.closePath()
-        // this.ctx.beginPath()
+        if(this.drawing){
+            this.ctx.closePath()
+            this.newLine = true;
+            this.saveImage()
+        }
         this.mousedown = false;
 
-        this.newLine = true;
     }
 
     handleMouseMove = (e) => {
-        if(!this.drawing){
+        if(this.filling){
             // hover stuff
             this.hoverRegion(e);
         }
 
-        let crd = this._getCanvasCoordinate(e)
-        if(crd == null) return;
+        
 
         if(this.mousedown && this.drawing){
+            let crd = this._getCanvasCoordinate(e)
+            if(crd == null) return;
+
             if(this.newLine){
                 this.newLine = false;
                 // console.log('resetting')
@@ -210,15 +232,6 @@ class paintCanvas{
 
         
             
-    }
-
-    setRegionOpacity = (reg, o) => {
-        var img = this.ctx.getImageData(0,0,this.sx,this.sy);
-        for(let point of this.pointsofRegion[reg]){
-            img.data[4 * (point) + 3] = o;
-        }
-
-        this.ctx.putImageData(img,0,0)
     }
 
     _edges = (i,j) => {
@@ -246,7 +259,7 @@ class paintCanvas{
         img.data[4*(i*this.sx + j)+3] = col[3]
     }
 
-    findRegions = (paint=true) => {
+    findRegions = () => {
         var img = this.ctx.getImageData(0,0,this.sx,this.sy);
 
         for(let p of Object.keys(this.regionOfPoint)){
@@ -290,20 +303,7 @@ class paintCanvas{
                     let y = node[1]
                     this.regionOfPoint[x*this.sx + y] = num_regions;
                     this.pointsofRegion[num_regions].push(x*this.sx + y)
-                    if(paint) {
-                        if(this.patterns.length > 0){
-                            let pat_img = this.patterns[num_regions % this.patterns.length];
-                            // console.log(pat_img.img)
-                            let offset_x = (((x - start_node[0]) % pat_img.size) + pat_img.size) % pat_img.size
-                            let offset_y = (((y - start_node[1]) % pat_img.size) + pat_img.size) % pat_img.size
-                            let pix_ind = 4 * (offset_x * pat_img.size + offset_y);
-                            // console.log(pix_offset,pix_ind)
-                            let pix_val = [pat_img.img[pix_ind],pat_img.img[pix_ind+1],pat_img.img[pix_ind+2],pat_img.img[pix_ind+3]]
-                            // console.log(offset_x,offset_y,pix_val)
-                            this._paintPixel(x,y,pix_val,img)
-                        }
-                        // this._paintPixel(x,y,col,img);
-                    }
+                    
                     for(let e of this._edges(x,y)){
                         if(visited.has(e[0]*this.sx + e[1])) continue;
                         if(this._isBoundary(e[0],e[1],img)){
@@ -319,14 +319,43 @@ class paintCanvas{
             }
         }
         console.log(`Found ${num_regions} different regions!`)
-        if(paint) this.paint(img);
-
+        
         this.saveImage()
     }
 
-    paint = (img) => {
-        this.ctx.putImageData(img,0,0);
-        this.paintTouchUps();
+    paintRegion = (e) => {
+        let crd = this._getCanvasCoordinate(e)
+        console.log(crd)
+        let reg;
+        if(crd == null){
+            return;
+        }
+        else{
+            reg = this.regionOfPoint[Math.floor(crd.y)*this.sx + Math.floor(crd.x)]
+        }
+
+        crd.x = Math.round(crd.x)
+        crd.y = Math.round(crd.y)
+        
+        var img = this.ctx.getImageData(0,0,this.sx,this.sy);
+        let pat_img = this.selectedTerrain;
+        console.log(pat_img.size)
+
+        // console.log('painting region',reg,pat_img)
+        
+        for(let point of this.pointsofRegion[reg]){
+            let y = point % this.sx
+            let x = Math.floor(point / this.sx)
+
+            let pix_ind = 4 * ((x % pat_img.size) * pat_img.size + (y % pat_img.size))
+            // console.log(offset_x)
+            let pix_val = [pat_img.img[pix_ind],pat_img.img[pix_ind+1],pat_img.img[pix_ind+2],pat_img.img[pix_ind+3]]
+            // console.log(pix_ind,pix_val)
+            this._paintPixel(x,y,pix_val,img)
+        }
+        this.ctx.putImageData(img,0,0)
+
+        this.saveImage()
     }
 
 }

@@ -40,7 +40,7 @@ var propBars = {}
 function createPropBars(){
     let dom = document.getElementById('prop-bars-container');
     for(let f of propNames){
-        console.log(f)
+        // console.log(f)
         dom.innerHTML += 
             `
                 <div class="col l12 xl6 bord prop-bar">
@@ -57,17 +57,34 @@ function createPropBars(){
                 type: 'bar',
                 data: {
                     labels: [],
-                    datasets: [{label:f, data: [], borderWidth: 1}]
+                    datasets: [{label:(f!='gps') ? caps(f) : capsAll(f), data: [], borderWidth: 1}]
                 },
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
                     animation: false,
                     fill: true,
+                    plugins:{
+                        legend:{
+                            labels:{
+                                font:{size:10},
+                                boxWidth: 10,
+                                boxHeight: 10
+                            }
+                        }
+                    },
                     scales:{
                         y:{
                             beginAtZero: true,
-                            suggestedMax: 30
+                            suggestedMax: 30,
+                            ticks:{
+                                font:{size:9}
+                            }
+                        },
+                        x:{
+                            ticks:{
+                                font:{size: 8}
+                            }
                         }
                     }
                 }

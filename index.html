@@ -8,6 +8,9 @@
     <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
     <!-- Compiled and minified JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -142,17 +145,78 @@
                 </div>
 
             </div>
-    <button onclick="W.showDayProgress()">SIM 1</button>
-    <button onclick="W.startNewSim(20,1)">SIM 20</button>
-    <button onclick="W.startNewSim(100,1)">SIM 100</button>
 
             <h4>Trait Trend</h4>
             <div class="row" id="prop-bars-container">
 
             </div>
         </div>
-        <div style="float: right; overflow: hidden;">
+        
+        <div class="" style="float: right; overflow: hidden;">
+            <div id="top-options-bar" class="options-bar">
+                
+                <div class="bar-btn cent fl" id="draw-world-btn">
+                    <i class="material-icons bar-icon">draw</i>
+                </div>
+                <div class="bar-btn cent fl" id="fill-world-btn">
+                    <i class="material-icons bar-icon">format_color_fill</i>
+                </div>
+
+                <div class="bar-group-hor" id="terrain-img-icons" style="display: none;">
+                    
+                </div>
+
+                <div class="bar-btn cent fl" id="done-edit-world-btn">
+                    <i class="material-icons bar-icon">done</i>
+                </div>
+            </div>
+
+
             <canvas id="world"></canvas>
+
+        </div>
+        <div id="mid-options-bar" class="options-bar" style="float: right; overflow:hidden;">
+
+            <div class="bar-btn cent circled-icon">
+                <i class="material-icons bar-icon">settings</i>
+            </div>
+            <div class="">
+                <div class="bar-btn cent" id="play-day-btn">
+                    <i class="material-icons bar-icon">play_arrow</i>
+                </div>
+                <div class="bar-group-vert">
+                    <div class="bar-btn cent" id="sim-days-1-btn">
+                        <div class="bar-text">SIM 1</div>
+                    </div>
+                    <div class="bar-btn cent" id="sim-days-20-btn">
+                        <div class="bar-text">SIM 20</div>
+                    </div>
+                    <div class="bar-btn cent" id="sim-days-100-btn">
+                        <div class="bar-text">SIM 100</div>
+                    </div>
+                    
+                </div>
+                <div class="bar-btn cent">
+                    <i class="material-icons bar-icon">show_chart</i>
+                </div>
+            </div>
+            
+            
+            
+            <div class="bar-bot">
+                <div class="bar-btn cent circled-icon" id="edit-genes-btn">
+                    <i class="material-icons bar-icon">edit</i>
+                </div>
+                <div id="mid-bar-genes" class="bar-group-vert">
+                    
+                </div>
+                <div class="bar-btn cent" id="save-genes-btn">
+                    <i class="material-icons bar-icon">save</i>
+                </div>
+                <div class="bar-btn cent" id="load-genes-btn">
+                    <i class="material-icons bar-icon">upload</i>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -182,7 +246,7 @@
         </div>
 
         <div class="modal-footer">
-        <a href="#!" onclick="formatWorldGenes(tempGeneData); document.getElementById('site-main').style.display = 'block';" class="modal-close waves-effect waves-green btn-flat">Begin</a>
+        <a href="#!" onclick="formatWorldGenes(tempGeneData);" class="modal-close waves-effect waves-green btn-flat">Start World</a>
         </div>
     </div>
 
@@ -244,6 +308,7 @@
     .cent{
         display: flex;
         justify-content: center;
+        text-align: center;
     }
     .color-choice{
         font-size: 60px;
@@ -334,6 +399,88 @@
         height: 100px;
     }
 
+    .options-bar{
+        margin: 0;
+        background-color: rgb(133, 133, 133);
+    }
+
+    .bar-btn{
+        width: 60px;
+        height: 60px;
+        background-color: rgba(160,160,160,0);
+        color: rgb(59, 58, 58);
+        cursor: pointer;
+    }
+
+    .fl{
+        float: left;
+    }
+
+    .bar-btn:hover{
+        background-color: rgba(160,160,160,0.4);
+    }
+
+    .bar-group-vert-main{
+        border-top: 1px solid;
+        border-bottom: 1px solid;
+        border-color: rgb(192, 192, 192);
+    }
+    .bar-group-vert{
+        border-top: 1px solid;
+        border-bottom: 1px solid;
+        border-color: rgb(152, 152, 152);
+    }
+
+    .bar-bot{
+        position: absolute;
+        bottom: 0;
+    }
+    .bar-right{
+        position: absolute;
+        right: 0;
+    }
+
+    .bar-icon{
+        font-size: 32px;
+        margin: auto;
+    }
+    
+    .circled-icon{
+        background-color: rgba(160,160,160,0.8);
+    }
+    .circled-icon:hover{
+        background-color: rgba(160,160,160,0.8);
+    }
+
+    .selected-icon{
+        background-color: rgba(160,160,160,0.6);
+    }
+    .selected-icon:hover{
+        background-color: rgba(160,160,160,0.6);
+    }
+
+    .bar-img{
+        margin: auto;
+        width: 30px;
+        height: 30px;
+    }
+    .selected-bar-img{
+        margin: auto;
+        width: 35px;
+        height: 35px;
+    }
+
+    .bar-text{
+        font-family: 'Montserrat', sans-serif;
+        font-size: 13px;
+        margin: auto;
+    }
+
+
+    .terrain-icon{
+        border: 3px solid rgb(59,58,58);
+        border-radius: 3px;
+    }
     
     </style>
 
