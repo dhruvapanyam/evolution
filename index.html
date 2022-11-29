@@ -14,6 +14,7 @@
     <!-- Compiled and minified JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.1.0/chartjs-plugin-annotation.min.js" integrity="sha512-1uGDhRiDlpOPrTi54rJHu3oBLizqaadZDDft+j4fVeFih6eQBeRPJuuP3JcxIqJxIjzOmRq57XwwO4FT+/owIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
             
 
 </head>
@@ -29,103 +30,12 @@
     .modal{width:75%;max-height: 100%;}
 </style>
 <body>
-    <!-- <div class="" style="display: none;">
-        <div class="row">
-            <div class="col s4" style="background-color: rgba(220,220,220,0.5); padding-top: 20px; display: none;">
-                <ul id="settings-tab" class="tabs tabs-fixed-width tab-demo z-depth-1">
-                    <li class="tab"><a href="#test0">Feature View</a></li>
-                    <li class="tab"><a href="#test1">Setup View</a></li><br>
-                </ul>
-                <div id="test1" class="col s12">
-                    <div class="row" style="margin: 20px;">
-                    <div class="col s2"></div>
-                    <div class="col s4"><a class="waves-effect waves-light btn" id="save-preset"><i class="material-icons left" style="margin: 0;">save</i>&nbsp;save preset</a></div>
-                    <div class="col s4">
-                        <a class="waves-effect waves-light btn" id="load-preset"><i class="material-icons left" style="margin: 0;">upload</i>&nbsp;load preset</a>
-                        <input type="file" id="load-preset-file" style="display: none;">
-                    </div>
-                    
-
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col s3">
-                        <ul id="gene-list-sidebar" class="collection with-header">
-                        </ul>                               
-                            <div class="row">
-                            <div class="input-field col s10">
-                                <input id="new-gene-inp" type="text" placeholder="New Gene..." class="validate">
-                                </div>
-                            <div class="col s2" style="margin-top: 20px;">
-                                <i class="material-icons" style="font-size: 30px; cursor: pointer;" onclick="addNewGene(document.getElementById('new-gene-inp').value)">add_circle_outline</i>
-                            </div>
-                        </div>
-                        </div>
-                        <div class="col s9" id="gene-props-sidebar" >
-                        </div>
-                        <br><br><br>
-                        
-                    </div>
-                    
-                                    
-                </div>
-                <div id="test0" class="col s12"><p>
-
-                    <a class="waves-effect waves-light btn modal-trigger" href="#gene-modal">Create your world</a>
-
-                    
-                </p></div>
-
-                <div class="row" id="summary-div">
-                    <canvas id="summary-chart" style="background-color: rgb(250,250,250);"  width="200" height="80"></canvas>
-
-                </div>
-                <div class="row">
-                    <div class="col s5"><a class="waves-effect waves-light btn" onclick="W.setupNewSim()">setup world</a><span>&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
-                    <div class="col s7">
-                        <div class="col s4"><a class="waves-effect waves-light btn" onclick="W.showDayProgress()">sim 1 day</a></div>
-                        <div class="col s4"><a class="waves-effect waves-light btn" onclick="W.startNewSim(20,1)">sim 20 days</a></div>
-                        <div class="col s4"><a class="waves-effect waves-light btn" onclick="W.startNewSim(100,1)">sim 100 days</a></div>
-                    </div>
-                    
-                </div>
-
-            </div>
-            
-            <div class="col s8" id="top-section-div">
-                <div class="row">
-                    <div style="display: none;" class="col s2"></div>
-                    <div style="display: none;" class="col s3" id="prop-bars">
-                    <canvas id="chart2"></canvas>
-
-                    </div>
-                </div>
-                <div class="row" id="bottom-section" style="margin-top: 10%; display: none;">
-                    <canvas id="chart1" width="250" height="50"></canvas>
-                </div>
-            </div>
-        </div>
-        
-    </div> -->
-    
+   
     
     <div id="site-main" class="row" style="border: 1px;">
         <div id="left-info-bar">
-            <!-- <div class="row">
-                <div class="col s12">
-                  <ul class="tabs">
-                    <li class="tab col s3 info-gene-tab"><a href="#test11">Speedy</a></li>
-                  </ul>
-                </div>
-                <div id="test11" class="col s12">
-                    Average speed: X<br>
-                    Average stamina: Y<br>
-                    ...
-                </div>
-            </div> -->
-
-
-            <h4>Census</h4>
+         
+            <h4>Census | <span class="sub-h4">Day <span id="day-number">0</span></span> | <span class="sub-h4">Population: <span id="pop-number">0</span></span></h4>
             <div class="row" id="pop-line-container">
                 <canvas id="pop-line" width="100"></canvas>
             </div>
@@ -169,6 +79,14 @@
                 <div class="bar-btn cent fl" id="done-edit-world-btn">
                     <i class="material-icons bar-icon">done</i>
                 </div>
+                <div class="bar-right">
+                    <div class="bar-btn cent fl" id="testing-toggle-btn">
+                        <i class="material-icons bar-icon">question_mark</i>
+                    </div>
+                    <div class="bar-btn cent fl" id="clear-world-btn">
+                        <i class="material-icons bar-icon">autorenew</i>
+                    </div>
+                </div>
             </div>
 
 
@@ -184,6 +102,9 @@
                 <div class="bar-btn cent" id="play-day-btn">
                     <i class="material-icons bar-icon">play_arrow</i>
                 </div>
+                <div class="bar-btn cent" id="pause-btn">
+                    <i class="material-icons bar-icon">pause</i>
+                </div>
                 <div class="bar-group-vert">
                     <div class="bar-btn cent" id="sim-days-1-btn">
                         <div class="bar-text">SIM 1</div>
@@ -194,9 +115,15 @@
                     <div class="bar-btn cent" id="sim-days-100-btn">
                         <div class="bar-text">SIM 100</div>
                     </div>
+                    <div class="bar-btn cent" id="sim-days-500-btn">
+                        <div class="bar-text">SIM 500</div>
+                    </div>
+                    <div class="bar-btn cent" id="restart-btn">
+                        <i class="material-icons bar-icon">autorenew</i>
+                    </div>
                     
                 </div>
-                <div class="bar-btn cent">
+                <div class="bar-btn cent" href="#trend-modal" id="trends-btn">
                     <i class="material-icons bar-icon">show_chart</i>
                 </div>
             </div>
@@ -250,6 +177,26 @@
         </div>
     </div>
 
+    <div id="trend-modal" class="modal">
+        <div class="modal-content">
+            <h4>Trait Trends</h4>
+        
+            <div class="row">
+                <div id="prop-trends-container" class="col xl12">
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12 all-trend-graph">
+                    <canvas id="all-trends-graph" width="200" height="40"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Close</a>
+        </div>
+    </div>
+
     <div id="terrain-imgs">
         <img id="terrain-grass" src="media/terrains/grass.jpeg" width="50" height="50" hidden>
         <img id="terrain-stone" src="media/terrains/stone.webp" width="50" height="50" hidden>
@@ -260,6 +207,7 @@
 <script src="helper.js"></script>
 <script src="paint.js"></script>
 <script src="sim.js"></script>
+<script src="simulator.js"></script>
 <script src="layout.js"></script>
 <script src="graphs.js"></script>
 <!-- <script src="combined.js"></script> -->
@@ -290,6 +238,7 @@
     }
     .modal{
         font-size: 25px;
+        margin-top: -3%;
     }
     .input-circle{
         margin-left: -10px;
@@ -396,7 +345,15 @@
     }
 
     .prop-bar{
-        height: 100px;
+        height: 90px;
+    }
+    .trend-graph{
+        height: 250px;
+        margin-bottom: 20px;
+    }
+    .all-trend-graph{
+        height: 400px;
+        /* margin-bottom: 20px; */
     }
 
     .options-bar{
@@ -481,6 +438,10 @@
         border: 3px solid rgb(59,58,58);
         border-radius: 3px;
     }
+
+    .sub-h4{
+        font-size: 25px;
+    }
     
     </style>
 
@@ -488,10 +449,11 @@
 <script>
 
 M.AutoInit()
-var modal = M.Modal.getInstance(document.getElementById('gene-modal'))
+var gene_modal = M.Modal.getInstance(document.getElementById('gene-modal'))
+var trend_modal = M.Modal.getInstance(document.getElementById('trend-modal'))
 // var modal = M.Modal.init(document.getElementById('gene-modal'), {});
-modal.open()
-createNewGene()
+// gene_modal.open()
+// createNewGene()
 // M.Tooltip.init(document.querySelectorAll('.tooltipped'),{})
 // M.Tabs.init(document.querySelectorAll('.tabs'),{})
 // var instance = M.Tabs.init(document.getElementById('settings-tab'), {});

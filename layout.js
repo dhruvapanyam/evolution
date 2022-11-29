@@ -1,7 +1,7 @@
 let propNames = ['speed','stamina','vision','gps','greed']
 
-var geneId = 0
-var tempGeneData = []
+var geneId = -1
+var tempGeneData = {}
 var activeGeneImg = 0
 const maxTokens = 30;
 
@@ -20,47 +20,54 @@ var gcol_names = Object.keys(gcols)
 // let hue_rots = [0,230,460,690,920]
 
 function createNewGene(){
-    if(tempGeneData.filter(g=>g.active).length==5) return;
+
+    if(Object.keys(tempGeneData).length == 5) return;
+
+    geneId += 1;
+
     let mod = document.getElementById('modal-imgs');
-    let col = gcol_names[tempGeneData.length % gcol_names.length]
+    let col = gcol_names[geneId % gcol_names.length]
     mod.innerHTML += `<div 
-                        id="gene-img-container-${tempGeneData.length}" 
+                        id="gene-img-container-${geneId}" 
                         style="float:left;margin-left:20px"
                     >
                     <img 
-                        id="gene-imgs-${tempGeneData.length}" 
+                        id="gene-imgs-${geneId}" 
                         src="media/blobs/${col}.png" width="150px" 
-                        onmousedown="selectGeneImg(${tempGeneData.length})"></div>`
-    tempGeneData.push(
+                        onmousedown="selectGeneImg(${geneId})"></div>`
+    tempGeneData[geneId] = 
         {
             props:{}, 
-            gname:'Gene'+(tempGeneData.length+1),
+            gname:'Gene'+(geneId+1),
             init_pop:1,
             tokens_used: 0,
-            active: true
+            active: true,
+            col: col
         }
-    )
     
-    let n = tempGeneData.length-1;
-    tempGeneData[n].col = col;
-    createGeneStatsCol(n)
-    selectGeneImg(n)
+    console.log('Created new gene:',tempGeneData)
+    createGeneStatsCol(geneId)
+    selectGeneImg(geneId)
 
-    popPie.data.labels.push(tempGeneData[n].gname)
+    popPie.data.labels.push(tempGeneData[geneId].gname)
     popPie.data.datasets[0].data.push(10)
     popPie.data.datasets[0].backgroundColor.push(changeOpacity(gcols[col],0.7))
     popPie.update()
     calculateInitPop()
+
+    return geneId;
 }
 
 function calculateInitPop(){
     let s = 0
-    for(let i=0;i<tempGeneData.length;i++){
-        s += tempGeneData[i].init_pop
+    for(let id in tempGeneData){
+        s += tempGeneData[id].init_pop
     }
 
-    for(let i=0;i<tempGeneData.length;i++){
-        popPie.data.datasets[0].data[i] = Math.floor(tempGeneData[i].init_pop * 1000 / s)/10;
+    let i=0;
+    for(let id in tempGeneData){
+        popPie.data.datasets[0].data[i] = Math.floor(tempGeneData[id].init_pop * 1000 / s)/10;
+        i+=1
     }
     popPie.update()
 }
@@ -68,11 +75,11 @@ function calculateInitPop(){
 function selectGeneImg(n){
     activeGeneImg = n;
     // console.log('new active gene:',n)
-    for(let i=0;i<tempGeneData.length;i++){
-        if(!tempGeneData[i].active) continue;
-        document.getElementById('gene-imgs-'+i).width = (i==n) ? 140 : 110
-        document.getElementById('gene-stats-'+i).style.display = (i==n) ? 'block' : 'none'
-        document.getElementById('gene-info-'+i).style.display = (i==n) ? 'block' : 'none'
+    for(let id in tempGeneData){
+        if(!tempGeneData[id].active) continue;
+        document.getElementById('gene-imgs-'+id).width = (id==n) ? 140 : 110
+        document.getElementById('gene-stats-'+id).style.display = (id==n) ? 'block' : 'none'
+        document.getElementById('gene-info-'+id).style.display = (id==n) ? 'block' : 'none'
     }
 }
 
@@ -177,7 +184,7 @@ function createGeneStatsCol(n){
 
 
     for(let f of propNames){
-        setGenePropScore(n,f,5)
+        setGenePropScore(n,f,6)
     }
 
     setGeneColor(n,tempGeneData[n].col)
@@ -218,6 +225,8 @@ function setMutation(n,f,fname,mut=null){
         v = mut;
     tempGeneData[n].props[f].mutation = v
 
+    // console.log(f,v)
+
     let d = document.getElementById(`prop-name-${f}-${n}`)
     d.style.color = v ? 'red' : 'black'
     if(v){
@@ -254,32 +263,25 @@ function setGenePropScore(n,f,v){
     document.getElementById(`tokens-left-${n}`).innerHTML = res
 
     if(f == 'stamina'){
-        document.getElementById(`shelf-life-${n}`).innerHTML = 100 + (10 * v)
+        document.getElementById(`shelf-life-${n}`).innerHTML = new Creature(null,new Vec(0,0),'',{stamina:{value:v,mutation_chance:0}},W.dim).init_ttl;
     }
 }
 
 function deleteGene(n){
-    tempGeneData[n].active = false;
+
     document.getElementById('gene-stats-'+n).remove()
     document.getElementById('gene-info-'+n).remove()
     document.getElementById('gene-img-container-'+n).remove()
 
     setInitPop(n,0)
 
+    tempGeneData[n] = undefined;
+    delete tempGeneData[n];
+
     if(activeGeneImg == n){
-        for(let i=0;i<tempGeneData.length;i++){
-            if(tempGeneData[i].active){
-                selectGeneImg(i)
-                break;
-            }
-        }
+        if(Object.keys(tempGeneData).length)
+            selectGeneImg(Object.keys(tempGeneData)[0])
     }
-    // tempGeneData.splice(n,1);
-    
-    // if(activeGeneImg == n){
-    //     // console.log('yes')
-    //     selectGeneImg(tempGeneData.length-1)
-    // }
 }
 
 const pop_pie = document.getElementById('gene-pop-pie')
@@ -313,8 +315,9 @@ const popPie = new Chart(
 
 
 function formatWorldGenes(genes){
-    let data = genes.filter(g => g.active).map(g => {
+    let data = Object.keys(genes).map(gId => {
         let props = {}
+        let g = tempGeneData[gId];
         for(let f in g.props){
             props[f] = {
                 value: parseFloat(g.props[f].value),
@@ -346,6 +349,7 @@ function showDominant(pop_stats){
     // propwise stats
     // pop_stats = {'5-5-5-5-5': 42, ...}
     // console.log(pop_stats, typeof pop_stats)
+    // console.log('showing dominant')
 
     let fittest = Object.keys(pop_stats)
     fittest.sort((a,b) => (pop_stats[b] - pop_stats[a]))
@@ -378,7 +382,7 @@ function showDominant(pop_stats){
         }
 
         let ht = 60
-        let martop = 20
+        let martop = 13
         let marbot =  0
         fx.innerHTML = `
         <div class="fittest-blobs">
@@ -433,30 +437,27 @@ function showDominant(pop_stats){
     
 }
 
-function showGeneData(){
+function showGeneData(genes){
 
-    tempGeneData = []
+    for(let id in tempGeneData)
+        deleteGene(id);
 
-    let dom1 = document.getElementById('modal-imgs');
-    let dom2 = document.getElementById('modal-stats-div');
-    let dom3 = document.getElementById('gene-info-div');
-
-    dom1.innerHTML = ''
-    dom2.innerHTML = ''
-    dom3.innerHTML = ''
+    console.log(tempGeneData)
 
     popPie.data.labels = []
     popPie.data.datasets[0].data = []
 
     let n=0;
-    for(let g in W.genes){
-        createNewGene()
-        changeGeneName(n,W.genes[g].name);
-        setInitPop(n,W.genes[g].pop);
-        setGeneColor(n,W.genes[g].colorName);
-        for(let f in W.genes[g].props){
-            let prop = W.genes[g].props[f];
+    for(let g in genes){
+        let gId = createNewGene()
+        let n = gId;
+        changeGeneName(n,genes[g].name);
+        setInitPop(n,genes[g].pop);
+        setGeneColor(n,genes[g].colorName);
+        for(let f in genes[g].props){
+            let prop = genes[g].props[f];
             let mut = (prop.mutation_chance > 0);
+            // alert(`${f} mutating? ${mut}`)
             setMutation(n,f,(f!='gps')?(caps(f)):(capsAll(f)),mut)
             setGenePropScore(n,f,prop.value)
         }
@@ -467,12 +468,12 @@ function showGeneData(){
 
     let dom = document.getElementById('mid-bar-genes');
     dom.innerHTML = ''
-    console.log(W.genes)
-    for(let g in W.genes){
+    console.log(genes)
+    for(let g in genes){
         console.log(g)
         dom.innerHTML += `
             <div class="bar-btn cent">
-                <img class="bar-img cent" src="${W.genes[g].img}">
+                <img class="bar-img cent" src="${genes[g].img}">
             </div>
         `
     }
@@ -481,19 +482,33 @@ function showGeneData(){
 
 // Mid-bar buttons
 document.getElementById('play-day-btn').addEventListener('click',e => {
-    W.showDayProgress();
+    W.startDemo({sim_length:1, wait_duration: 20});
+})
+document.getElementById('pause-btn').addEventListener('click',e => {
+    W.pauseSim();
+    W.pauseDemo();
 })
 document.getElementById('sim-days-1-btn').addEventListener('click',e => {
-    W.startNewSim(1,1);
+    W.startSim({sim_length:1, wait_duration:1});
 })
 document.getElementById('sim-days-20-btn').addEventListener('click',e => {
-    W.startNewSim(20,1);
+    W.startSim({sim_length:20, wait_duration:1});
 })
 document.getElementById('sim-days-100-btn').addEventListener('click',e => {
-    W.startNewSim(100,1);
+    W.startSim({sim_length:100, wait_duration:1});
+})
+document.getElementById('sim-days-500-btn').addEventListener('click',e => {
+    W.startSim({sim_length:500, wait_duration:1});
+})
+document.getElementById('trends-btn').addEventListener('click',e => {
+    updateTrends()
+    trend_modal.open()
+})
+document.getElementById('restart-btn').addEventListener('click',e => {
+    W.loadGeneData(JSON.stringify(W.genes))
 })
 document.getElementById('edit-genes-btn').addEventListener('click',e => {
-    modal.open();
+    gene_modal.open();
 })
 document.getElementById('save-genes-btn').addEventListener('click',e => {
     W.saveGeneData()
@@ -501,6 +516,16 @@ document.getElementById('save-genes-btn').addEventListener('click',e => {
 document.getElementById('load-genes-btn').addEventListener('click',e => {
     W.loadGeneData()
 })
+document.getElementById('testing-toggle-btn').addEventListener('click',e => {
+    TESTING = !TESTING;
+    W.loadGeneData();
+    if(TESTING) document.getElementById('testing-toggle-btn').classList.add('selected-icon')
+    else document.getElementById('testing-toggle-btn').classList.remove('selected-icon')
+})
+document.getElementById('clear-world-btn').addEventListener('click',e => {
+    W.resetPainter(true)
+})
+
 
 function selectTerrainIcon(id){
     for(let dom of document.getElementsByClassName('terrain-img')){
@@ -576,7 +601,7 @@ const resizeDOMs = () => {
 
     // pop-line bar
     let popline = document.getElementById('pop-line-container');
-    popline.style.height = `${window.innerHeight * 0.14}px`
+    popline.style.height = `${window.innerHeight * 0.115}px`
     popline.style.width = '100%'
 }
 resizeDOMs();

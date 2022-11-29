@@ -21,21 +21,27 @@ class Food {
 
 class Creature {
     constructor(id,pos,gene,props,dim){
-        const D = simMetadata.TTLratio
         this.id = id
         this.pos = pos
         this.gene = gene
-        this.props = props
+        this.props = JSON.parse(JSON.stringify(props));
+        for(let f in this.props){
+            this.props[f].value = parseFloat(this.props[f].value)
+            this.props[f].mutation_chance = parseFloat(this.props[f].mutation_chance)
+        }
         // console.log(this.props.speed.value,this.init_ttl)
         this.dim = dim
         // this.init_ttl = Math.floor(Math.pow(D / this.props.speed.value, simMetadata.speedTTLexp)) * this.dim.radius/300
-        this.init_ttl = this.props.stamina.value * 10 + 100;
-        this.ttl = this.init_ttl
+        // this.init_ttl = this.props.stamina.value * Math.floor(maxTime/20) + (maxTime/2);
+        // this.ttl = this.init_ttl
         this.ang = this.pos.angleTo(this.dim.center) + (Math.random()*2-1)*Math.PI/2
         // this.ang = this.pos.angleTo(dim.center)
         // this.ang = Math.random()*Math.PI*2
 
         this.spawn = this.pos.copy()
+
+
+        
 
         this.food = 0
         this.size = 5
@@ -44,44 +50,169 @@ class Creature {
         this.sight = 0.5
         this.fov = this.sight
 
+
+        this.maxTokens = 30;
+
+        this.target = {
+            looking_for: 'food',
+            pos: null,
+            fid: null
+        }
+
+        this.norm_props = {}
+        this.normalizeProps();
+
+        this.init_ttl = this.norm_props.stamina.value;
+        this.ttl = this.init_ttl;
+
+        this.age = 0;
+
         // console.log(this.ttl)
-        
+
+        if(TESTING){
+            this.pos = new Vec(dim.center.x,dim.center.y)
+            this.spawn = new Vec(dim.radius,0);
+            this.food = 1;
+            this.target.looking_for = 'home'
+        }
 
     }
 
-    reset = () => {
+    normalizeProps = () => {
+        clearObject(this.norm_props);
+
+        for(let f in this.props){
+            let v;
+            switch(f){
+                case 'speed':
+                    v = this.props[f].value * 0.8; break;
+                case 'stamina':
+                    v = this.props[f].value * Math.floor(maxTime/10); break;
+                case 'vision':
+                    v = this.props[f].value * 10; break;
+                case 'gps':
+                    v = Math.pow(this.props[f].value * 0.1, 1); break;
+                case 'greed':
+                    v = Math.pow(this.props[f].value * 0.1, 1); break;
+                default:
+                    v = this.props[f].value;
+            }
+            this.norm_props[f] = {
+                value: v,
+                mutation_chance: this.props[f].mutation_chance
+            }
+        }
+    }
+
+    daySuccess = () => {
         this.ttl = this.init_ttl
+        this.age += 1;
         this.ang = this.pos.angleTo(this.dim.center) + (Math.random()*2-1)*Math.PI/2
         // this.ang = Math.random()*Math.PI
         this.food = 0
         this.fov = this.sight
         this.spawn = this.pos.copy()
+        this.target.looking_for = 'food'
+        this.target.pos = null;
+        this.target.fid = null;
     }
 
-    move = (food=new Set()) => {
+    nearbyFood = (food_cells,close=null) => {
+        // 2d array of sets
+        // look through surrounding cells of enough length
+        let world_size = this.dim.radius*2;
+        let grid_size = world_size / food_cells.length;
+        let grid_search_range = (close!=null) ? 1 : Math.ceil(this.props.vision.value / grid_size);
+        let x=this.pos.x, y=this.pos.y
+        let gridX = Math.floor((x+world_size/2)*food_cells.length / (world_size))
+        let gridY = Math.floor((y+world_size/2)*food_cells.length / (world_size))
 
-        // if(this.id != 10) return false;
-        let food_found = null;
-        if(this.food < 2){
-            for(let f of food){
-                let dx = Math.abs(f.pos.x - this.pos.x) / 10
-                let dy = Math.abs(f.pos.y - this.pos.y) / 10 // scaling
-                if(dx>this.props.vision.value || dy>this.props.vision.value) continue 
-                if(this.pos.distTo(f.pos)/10 <= this.props.vision.value && ((Math.PI*2 + this.ang - this.pos.angleTo(f.pos))%(Math.PI*2) < this.sight)){ // fov = 0.6
-                    food_found = f.pos
-                    break;
-                }           
+        let res = []
+        for(let i=Math.max(0,gridX-grid_search_range);i<=Math.min(food_cells.length-1,gridX+grid_search_range);i++){
+            for(let j=Math.max(0,gridY-grid_search_range);j<=Math.min(food_cells.length-1,gridY+grid_search_range);j++){
+                for(let val of food_cells[i][j]) res.push(val);
             }
         }
-        if(food_found == null){
-            this.ang += (Math.random()*2-1) * this.fov
+        // console.log(res)
+        return res;
+    }
+
+    move = (food,food_cells) => {
+
+        let speed_slower = 1;
+
+        if(this.target.looking_for == 'food'){
+            // console.log('foodie')
+            if(this.target.fid == null){
+                let foodID = this.nearbyFood(food_cells);
+
+                if(this.food < 2){
+                    for(let fid of foodID){
+                        if(food[fid] == undefined) continue;
+                        let f = food[fid]
+                        // console.log(fid,f)
+                        let dx = Math.abs(f.pos.x - this.pos.x)
+                        let dy = Math.abs(f.pos.y - this.pos.y) // scaling
+                        if(dx>this.norm_props.vision.value || dy>this.norm_props.vision.value) continue 
+                        if(this.pos.distTo(f.pos) <= this.norm_props.vision.value && ((Math.PI*2 + this.ang - this.pos.angleTo(f.pos))%(Math.PI*2) < this.sight)){ // fov = 0.6
+                            this.target.looking_for = 'food'
+                            this.target.pos = f.pos
+                            this.target.fid = fid
+
+                            this.ang = this.pos.angleTo(f.pos);
+                            // console.log('found food',fid)
+                            
+                            break;
+                        }           
+                    }
+                }
+                if(this.target.fid == null)
+                    this.ang += (Math.random()*2-1) * this.fov
+            }
+            else{
+                // keep going in the same direction;
+                if(food[this.target.fid] == undefined){
+                    this.target.pos = null;
+                    this.target.fid = null;
+                }
+            }
         }
         else{
-            // console.log('found food!')
-            this.ang = this.pos.angleTo(food_found)
-            // this.fov = this.vision
+            // looking for home
+
+            if(this.pos.distTo(this.spawn) <= this.norm_props.vision.value && ((Math.PI*2 + this.ang - this.pos.angleTo(this.spawn))%(Math.PI*2) < this.sight)){ // fov = 0.6
+                this.target.pos = this.spawn
+            } 
+
+            this.ang = this.pos.angleTo(this.spawn);
+            // console.log(ang_to_spawn)
+            let dist_to_spawn = this.pos.distTo(this.spawn);
+
+            if(this.target.pos == null){
+                // create error in position belief
+
+                // let err_radius = this.dim.radius * 1 * (1 - this.norm_props.gps.value);
+                // choose random point in this circle;
+                // let pseudo = randomPointInCircle(this.pos, err_radius);
+                // this.ang = pseudo.angleTo(this.spawn)
+
+                let min_speed = 0.2
+                speed_slower = min_speed + this.norm_props.gps.value * (1-min_speed);
+                let coin1 = Math.random()*2 - 1;
+                let min_err = Math.PI/8;
+                let err_range = Math.PI*1 - min_err
+                let ang_err = (coin1 * err_range) + min_err
+                // // let coin2 = Math.random();
+
+                // // error reduces with distance?
+                let err = ang_err * (1-this.norm_props.gps.value) //* Math.min(1,Math.pow(dist_to_spawn / this.dim.radius,0.2))
+                this.ang += err
+            }
+            
         }
-        let step = randVec(this.props.speed.value, this.ang)
+
+
+        let step = randVec(this.norm_props.speed.value * speed_slower, this.ang)
         this.pos.add(step)
         this.pos = this.pos.bordered(this.dim)
         // console.log('move',this)
@@ -92,17 +223,43 @@ class Creature {
         return (!this.home() && this.alive())
     }
 
+    tryEating = (food,food_cells) => {
+        if(this.target.looking_for != 'food') return null;
+        if(this.target.fid == null) return null;
+        // let fIds = this.nearbyFood(food_cells,1);
+        // let maxD = this.size + ;
+        let fid = this.target.fid
+        // console.log(this.id,'wants food',fid,food[fid])
+        if(this.pos.distTo(food[fid].pos) > this.size + food[fid].size) return null;
+            // else, eat
+        // console.log(this.id,'eating',fid)
+        this.eat()
+        return fid;
+    }
+
     eat = () => {
         this.food += 1
+        this.target.pos = null;
+        this.target.fid = null;
         
+        // console.log('eating')
         
         // choose whether to go back home
-        let r = Math.random() * 10
-        if(r > this.props.greed.value || this.food==2){
-            this.fov = this.sight * (1-this.props.gps.value/10)
+        let r = Math.random()
+        // this.fov = this.sight;
+        if(r > this.norm_props.greed.value || this.food==2){
+            this.fov = this.sight * (1-this.norm_props.gps.value)
+            this.fov = 0
+            this.ang = this.pos.angleTo(this.spawn)
+            // console.log(this.id,'going home')
+            this.target.looking_for = 'home';
         }
+        else{
+            // console.log(this.id,'greedy')
+            this.target.looking_for = 'food';
+        }
+
         
-        this.ang = this.pos.angleTo(this.spawn)
     }
 
     alive = () => {return this.ttl > 0}
@@ -112,30 +269,52 @@ class Creature {
         // console.log(this.pos.x,this.pos.y)
         // console.log('home',this.healthy(),this.pos.magnitude())
         // if(this.pos.x < 1) console.log(this.healthy() && this.pos.x==0)
-        return (this.healthy() && Math.abs(this.pos.distTo(this.dim.center)-this.dim.radius) < 1)
+        // return (this.healthy() && Math.abs(this.pos.distTo(this.dim.center)-this.dim.radius) < 1)
+
+        // instead, check if at spawn point
+        return (this.healthy() && Math.abs(this.pos.distTo(this.spawn)) < this.size/2)
     }
 
+    energyUsed = () => {
+        let s=0;
+        for(let prop in this.props) s += this.props[prop].value;
+        return s;
+    }
 
+    boostTrait = (prop, direction) => {
+        let v = this.props[prop].value;
+        let change = features[prop].mut_inc
+        let new_val = roundTraitValue(v + (direction*change))
+        this.props[prop].value = Math.max(Math.min(10, new_val),0)
+
+        // console.log(`New ${prop}:${v}->${this.props[prop].value}`)
+        if(this.energyUsed() > this.maxTokens){
+            let rand_prop;
+            let ps = Object.keys(this.props);
+            do{
+                rand_prop = ps[Math.floor(Math.random()*ps.length)];
+                while(this.props[rand_prop].value > 0 && this.energyUsed() > this.maxTokens){
+                    let val = this.props[rand_prop].value
+                    this.props[rand_prop].value = roundTraitValue(val-features[rand_prop].mut_inc)
+                }
+                // console.log(`Damaging ${rand_prop}`)
+            } while(this.energyUsed()>this.maxTokens)
+        }
+        this.normalizeProps();
+    }
 
     reproduce = (id,pos) => {
-        let temp = JSON.parse(JSON.stringify(this.props))
-        // console.log('old creature:',this.props.speed.value,temp.speed.value)
-        for(let f in temp){
-            // console.log(f,temp[f].value)
-            let biased_coin = Math.random()
-            let direction = Math.round(Math.random())*2 - 1
-            let m = temp[f].mutation_chance
+        let offspring = new Creature(id,pos,this.gene,this.props,this.dim)
+        for(let f in offspring.props){
+            let coin = Math.random() < offspring.props[f].mutation_chance; // bool
+            let dir = Math.round(Math.random())*2 - 1 // + or - 1
 
-            let inc = (biased_coin < m) ? (features[f].mut_inc * direction) : 0 // can both increase and decrease
-            // console.log(inc)
-
-            temp[f].value = parseFloat(temp[f].value) + parseFloat(inc)
-            temp[f].value = Math.max(Math.min(temp[f].value,10),0)
-            
+            if(coin){
+                offspring.boostTrait(f,dir);
+            }
+            // console.log(coin)
         }
-        // console.log('new creature:',temp)
-        // console.log('mutation:',this.props.gps.value,temp.gps.value)
-        return new Creature(id,pos,this.gene,temp,this.dim)
+        return offspring;
     }
 }
 
@@ -155,14 +334,22 @@ class World {
 
         this.creatureID = 1;    // unique creature ID
 
-        this.food = new Set()   // set of food items in the world
+        this.food = {}   // set of food items in the world
+        this.food_cells = []
+        let gsize = 10;
+        for(let i=0;i<gsize;i++){
+            this.food_cells.push([])
+            for(let j=0;j<gsize;j++)
+                this.food_cells[i].push(new Set())
+        }
         this.creatures = {}  // set of creatures currently alive
         this.awake = new Set()      // set of creatures currently alive and not home
 
-        this.day = 0
+        this.currentDay = 0
+        this.startDay = 0
+        this.stopDay = 0
         this.time = 0
 
-        this.update_period = 1
 
         this.running = false;
 
@@ -186,14 +373,22 @@ class World {
 
         this.stats = {
             countwise: {},
-            propwise: {}
+            propwise: {},
+            agewise: {}
         };
 
         this.drawTimer()
+
+        this.intervals = new Set();
+
+
+        //TESTING
+        this.food_frequency = Math.floor(maxTime/this.params.food_frequency);
+
     }
 
-    resetPainter = () => {
-        this.painter.reset();
+    resetPainter = (complete=false) => {
+        this.painter.reset(complete);
     }
 
     setDraw = (v) => {
@@ -212,15 +407,16 @@ class World {
         let c = this.ctx;
         this.painter.reset();
 
-        c.strokeStyle = 'black'
-        c.beginPath()
-        c.arc(this.canvas.width/2, this.canvas.height/2,this.dim.radius*scale,0,Math.PI*2)
-        c.stroke()
+        // c.strokeStyle = 'black'
+        // c.beginPath()
+        // c.arc(this.canvas.width/2, this.canvas.height/2,this.dim.radius*scale,0,Math.PI*2)
+        // c.stroke()
 
         c.lineWidth = 1
 
 
-        for(let f of this.food){
+        for(let fid in this.food){
+            let f = this.food[fid]
             c.fillStyle = f.color
             c.beginPath()
             c.arc(this.canvas.width/2 + f.pos.x*scale, this.canvas.height/2 + f.pos.y*scale,f.size*scale,0,Math.PI*2)
@@ -249,6 +445,10 @@ class World {
                     blob_size,blob_size
                 )
 
+            this.ctx.font = '10px serif'
+            this.ctx.fillStyle = 'red'
+            this.ctx.fillText(id, this.canvas.width/2+f.pos.x*scale,this.canvas.height/2+f.pos.y*scale-10)
+
             // let col = 'rgb(255,'+String(255 - f.props.speed.value*(255)/(maxSpeed-1))+',0)'
             // c.fillStyle = col;
             // c.beginPath()
@@ -276,7 +476,7 @@ class World {
     }
 
     drawTimer = () => {
-        let percent = this.time / 200
+        let percent = this.time / maxTime
         this.ctx.save()
 
         let x = this.canvas.width * 0.93
@@ -299,9 +499,9 @@ class World {
         this.ctx.fillStyle = 'black'
 
         this.ctx.fillText('0',x-2, y-r-2)
-        this.ctx.fillText('50',x+r+2, y+3)
-        this.ctx.fillText('100',x-7, y+r+10)
-        this.ctx.fillText('150',x-r-18,y+3)
+        this.ctx.fillText(Math.floor(maxTime/4),x+r+2, y+3)
+        this.ctx.fillText(Math.floor(maxTime/2),x-7, y+r+10)
+        this.ctx.fillText(Math.floor(3*maxTime/4),x-r-18,y+3)
 
         this.ctx.restore()
     }
@@ -309,27 +509,51 @@ class World {
     getRandStartingPos = () => {
         let ang = Math.random()*Math.PI*2
         return new Vec(Math.cos(ang)*this.dim.radius, Math.sin(ang)*this.dim.radius).addC(this.dim.center)
+        return randomPointInCircle(this.dim.center, this.dim.radius)
         // return pos;
     }
 
-    placeFood = (num_food) => {
+    injectFood = (num_food,beginning=true) => {
+
+        if(beginning){
+            clearObject(this.food)
+            this.foodID = 0;
+            for(let i=0;i<this.food_cells.length;i++){
+                for(let j=0;j<this.food_cells[i].length;j++){
+                    this.food_cells[i][j].clear();
+                }
+            }
+        }
+
+        // console.log('adding foods')
+        
         for(let i=0;i<num_food;i++){
+            let rand_point = randomPointInCircle(this.dim.center, this.dim.radius)
             // let x=-1,y=-1;
             // do{
-            //     x = Math.random() * this.canvas.width;
-            //     y = Math.random() * this.canvas.height;
-            // } while(this.painter._worldContains({x:x-this.canvas}))
+            //     x = (Math.random()*2-1) * this.dim.radius;
+            //     y = (Math.random()*2-1) * this.dim.radius;
+            // } while(new Vec(x,y).distTo(this.dim.center) > this.dim.radius)
 
-            let d = Math.random()*this.dim.radius
-            let a = Math.random()*Math.PI*2
-            this.food.add(new Food(i, new Vec(Math.cos(a)*d,Math.sin(a)*d)))
+            // let d = Math.random()*this.dim.radius
+            // let a = Math.random()*Math.PI*2
+            // this.food.add(new Food(i, new Vec(Math.cos(a)*d,Math.sin(a)*d)))
+            let gridX = Math.floor((rand_point.x+this.dim.radius)*this.food_cells.length / (this.dim.radius*2))
+            let gridY = Math.floor((rand_point.y+this.dim.radius)*this.food_cells.length / (this.dim.radius*2))
+            // console.log()
+            this.food_cells[gridX][gridY].add(i)
+            this.food[this.foodID] = new Food(this.foodID, rand_point)//,2,`rgb(150,${gridX*20},${gridY*20})`)
+            this.foodID++;
         }
     }
 
 
     setGeneData = (genes) => {
+        // console.log(genes)
         popLine.data.labels = []
         popLine.data.datasets = []
+        clearObject(this.genes)
+        
         for(let gname in genes){
             this.genes[gname] = {...genes[gname]}
 
@@ -338,13 +562,16 @@ class World {
                 label: gname,
                 borderColor: changeOpacity(genes[gname].color, 0.8),
                 pointBorderWidth: 1,
-                backgroundColor: changeOpacity(genes[gname].color, 0.4)
+                backgroundColor: changeOpacity(genes[gname].color, 0.4),
+
+                parsing: false,
+                normalized: true
             })
         }
  
         this._loadBlobs();
+        showGeneData(this.genes);
         this.setupNewSim();
-        showGeneData();
 
     }
 
@@ -352,34 +579,47 @@ class World {
         download(JSON.stringify(this.genes), 'genes.txt', 'text');
     }
 
-    loadGeneData = () => {
-        var input = document.createElement('input');
-        input.type = 'file';
-        input.onchange = e => { 
+    loadGeneData = (str=null) => {
 
-            // getting a hold of the file reference
-            var file = e.target.files[0]; 
-         
-            // setting up the reader
-            var reader = new FileReader();
-            reader.readAsText(file,'UTF-8');
-         
-            // here we tell the reader what to do when it's done reading...
-            reader.onload = readerEvent => {
-               var content = readerEvent.target.result; // this is the content!
-            //    console.log( content );
-                var gene_data = JSON.parse(content);
-                this.setGeneData(gene_data)
-            }
-         
+        let gene_data;
+        if(str == null){
+            gene_data = JSON.parse(
+                // `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(223,135,97,0.6)","img":"media/blob_draw/orange.png","colorName":"orange","props":{"speed":{"value":5,"mutation_chance":0},"stamina":{"value":5,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0},"gps":{"value":5,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1},"Gene2":{"name":"Gene2","inUse":true,"color":"rgb(64,170,216,0.6)","img":"media/blob_draw/blue.png","colorName":"blue","props":{"speed":{"value":8,"mutation_chance":0},"stamina":{"value":4,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0.3},"gps":{"value":3,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1}}`
+                // `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(223,135,97,0.6)","img":"media/blob_draw/orange.png","colorName":"orange","props":{"speed":{"value":2,"mutation_chance":0},"stamina":{"value":10,"mutation_chance":0},"vision":{"value":8,"mutation_chance":0},"gps":{"value":5,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1}}`
+                `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(64,170,216,0.6)","img":"media/blob_draw/blue.png","colorName":"blue","props":{"speed":{"value":6,"mutation_chance":0.2},"stamina":{"value":6,"mutation_chance":0.2},"vision":{"value":6,"mutation_chance":0.2},"gps":{"value":6,"mutation_chance":0.2},"greed":{"value":6,"mutation_chance":0.2}},"pop":1}}`
+            )
         }
+        else{
+            gene_data = JSON.parse(str)
+        }
+
+
+        this.setGeneData(gene_data);
+
+        // var input = document.createElement('input');
+        // input.type = 'file';
+        // input.onchange = e => { 
+
+        //     // getting a hold of the file reference
+        //     var file = e.target.files[0]; 
+         
+        //     // setting up the reader
+        //     var reader = new FileReader();
+        //     reader.readAsText(file,'UTF-8');
+         
+        //     // here we tell the reader what to do when it's done reading...
+        //     reader.onload = readerEvent => {
+        //        var content = readerEvent.target.result; // this is the content!
+        //     //    console.log( content );
+        //         var gene_data = JSON.parse(content);
+        //         this.setGeneData(gene_data)
+        //     }
+         
+        // }
          
         //  input.click();
 
-        var gene_data = JSON.parse(
-            `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(223,135,97,0.6)","img":"media/blob_draw/orange.png","colorName":"orange","props":{"speed":{"value":5,"mutation_chance":0},"stamina":{"value":5,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0},"gps":{"value":5,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1},"Gene2":{"name":"Gene2","inUse":true,"color":"rgb(64,170,216,0.6)","img":"media/blob_draw/blue.png","colorName":"blue","props":{"speed":{"value":8,"mutation_chance":0},"stamina":{"value":4,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0.3},"gps":{"value":3,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1}}`
-        )
-        this.setGeneData(gene_data);
+        
 
         
     }
@@ -388,13 +628,69 @@ class World {
         for(let g in this.genes){
             this.stats.countwise[g] = 0
         }
-        for(let f in features){
+        let j=0;
+        allTrends.data.datasets = [];
+        for(let f in trendCharts){
+
+            // TREND GRAPHS
+            trendCharts[f].chart.data.labels = [`T+0`];
+            let i=0;
+            trendCharts[f].chart.data.datasets = [{
+                data:[],
+                label: 'overall',
+                borderColor: 'black',
+                borderWidth: 1.5
+            }]
+            trendCharts[f].chart.options.plugins.annotation.annotations['overall'] = 
+            {
+                type: 'line',
+                yMin: 7,
+                yMax: 7,
+                borderColor: changeOpacity('rgba(0,0,0,1)',1),
+                borderWidth: 1.2,
+                borderDash: [2]
+            }
+            trendCharts[f].cur_mean['overall'] = {num:0,sum:0}
+
+            allTrends.data.datasets.push({
+                label: f,
+                data:[],
+                borderColor: gcols[gcol_names[j++]]
+            })
+
+            for(let g in this.genes){
+                // trendCharts[f].chart.options.plugins.annotation.annotations[g] = 
+                // {
+                //     type: 'line',
+                //     yMin: 7,
+                //     yMax: 7,
+                //     borderColor: changeOpacity(this.genes[g].color,0.5),
+                //     borderWidth: 1,
+                // }
+                trendCharts[f].chart.data.datasets.push({
+                    label:g,
+                    data:[],
+                    borderColor: this.genes[g].color,
+                    hidden: true
+                });
+                trendCharts[f].cur_mean[g] = {num:0,sum:0}
+            }
+
+            
+
+            if(f in features == false) continue; // 'age', etc
+
+
+            // PROP BARS
             let len = parseInt(10/(features[f].mut_inc)) + 1
             // console.log(f,features[f].mut_inc,len)
             this.stats.propwise[f] = [...Array(len)].map(x=>0);
             propBars[f].data.datasets[0].data = []
             for(let i=0;i<this.stats.propwise[f].length;i++)
-                propBars[f].data.datasets[0].data.push(0);
+                propBars[f].data.datasets[0].data.push({
+                    x: i,
+                    y: 0
+                });
             propBars[f].data.labels = this.stats.propwise[f].map((x,i)=>Math.round(i*features[f].mut_inc*10)/10)
             propBars[f].data.datasets[0].backgroundColor = this.stats.propwise[f].map((x,i)=>{
                 let col = 'rgba(0,128,128,1)'
@@ -408,48 +704,111 @@ class World {
         }
     }
 
-    calculateStats = () => {
-        this.setupStats();
-        for(let cid in this.creatures){
-            let c = this.creatures[cid];
-            this.hanldeBirthStats(c); // treat this creature as new
-        }
-    }
-
     handleDeathStats = (c) => {
         this.stats.countwise[c.gene] -= 1;
         for(let f in c.props){
             let index = parseInt(c.props[f].value / features[f].mut_inc)
             this.stats.propwise[f][index] -= 1
+
+
+            trendCharts[f].cur_mean[c.gene].num -= 1
+            trendCharts[f].cur_mean[c.gene].sum -= c.props[f].value
+
+            trendCharts[f].cur_mean['overall'].num -= 1
+            trendCharts[f].cur_mean['overall'].sum -= c.props[f].value
         }
+
+        trendCharts['age'].cur_mean[c.gene].num -= 1
+        trendCharts['age'].cur_mean[c.gene].sum -= c.age
+
+        trendCharts['age'].cur_mean['overall'].num -= 1
+        trendCharts['age'].cur_mean['overall'].sum -= c.age
     }
 
     hanldeBirthStats = (c) => {
         this.stats.countwise[c.gene] += 1;
+        // console.log(c.props.vision.value)
         for(let f in c.props){
             let index = parseInt(c.props[f].value / features[f].mut_inc)
-            // console.log('updating index',index)
+            // if(f=='vision') console.log('updating index',index,c.props.vision.value)
             this.stats.propwise[f][index] += 1
             // console.log(this.stats.propwise[f])
+
+            trendCharts[f].cur_mean[c.gene].num += 1
+            trendCharts[f].cur_mean[c.gene].sum += c.props[f].value
+
+            trendCharts[f].cur_mean['overall'].num += 1
+            trendCharts[f].cur_mean['overall'].sum += c.props[f].value
         }
+
+        trendCharts['age'].cur_mean[c.gene].num += 1
+        trendCharts['age'].cur_mean[c.gene].sum += c.age
+
+        trendCharts['age'].cur_mean['overall'].num += 1
+        trendCharts['age'].cur_mean['overall'].sum += c.age
     }
 
     newDayStats = () => {
-        if(this.day != popLine.data.labels.length-1)
-            popLine.data.labels.push(`T+${this.day}`)
-        this.calculateStats()
-        let i=0;
-        for(let g in this.genes){
-            popLine.data.datasets[i].data.push(this.stats.countwise[g]);
-            i++;
-        }
-        popLine.update();
 
-        for(let f in this.stats.propwise){
-            for(let i=0;i<this.stats.propwise[f].length;i++)
-                propBars[f].data.datasets[0].data[i] = this.stats.propwise[f][i]
-            propBars[f].update()
-            // console.log(propBars[f].data.datasets[0].data)
+        // console.log('new day')
+        let sim_length = this.stopDay-this.startDay
+        let update_freq = Math.max(1,Math.floor(sim_length/100));
+        let update_chart = Boolean((this.currentDay-this.startDay)%update_freq==0 || this.stopDay==this.currentDay)
+
+        // if(this.currentDay == popLine.data.labels.length-1) alert('hmm')
+
+        popLine.data.labels.push(`T+${this.currentDay}`)
+        document.getElementById('day-number').innerHTML = this.currentDay;
+        // this.calculateStats()
+        let i=0;
+        let pop = 0;
+        for(let g in this.genes){
+            // console.log(i,g,popLine.data.datasets)
+            popLine.data.datasets[i].data.push(
+                    {x:this.currentDay, y:this.stats.countwise[g]}
+                );
+            i++;
+            pop+=this.stats.countwise[g];
+        }
+        if(update_chart) popLine.update();
+
+        document.getElementById('pop-number').innerHTML = pop;
+
+        let j=0
+        allTrends.data.labels.push(`T+${this.currentDay}`)
+
+        for(let f in trendCharts){
+            // console.log(this.stats.propwise[f])
+            if(f in features){
+                for(let i=0;i<this.stats.propwise[f].length;i++)
+                propBars[f].data.datasets[0].data[i].y = this.stats.propwise[f][i]
+                if(update_chart) propBars[f].update()
+            }
+            
+            trendCharts[f].chart.data.labels.push(`T+${this.currentDay}`)
+            i=0
+            let mData = trendCharts[f].cur_mean['overall'];
+            let mean;
+            if (mData.num == 0) 
+                mean = 0
+            else 
+                mean = Math.round(100*mData.sum / mData.num)/100
+
+            allTrends.data.datasets[j++].data.push(mean)
+            trendCharts[f].chart.data.datasets[i++].data.push(mean)
+
+            for(let g in this.genes){
+                let mData = trendCharts[f].cur_mean[g];
+                let mean;
+                if (mData.num == 0) 
+                    mean = 0
+                else 
+                    mean = Math.round(100*mData.sum / mData.num)/100
+                trendCharts[f].chart.data.datasets[i++].data.push(mean)
+            }
+            // console.log(trendCharts[f].chart.data)
+
+            
         }
     }
 
@@ -496,22 +855,13 @@ class World {
         // set world back to init
 
         let i=0;
-        let opac = 0.4
+        this.params.init_pop = init_pop()
+        this.params.init_food = init_food()
         
-
-
-        // this.food = new Set()
-        for(let f of this.food) {
-            // f = null;
-            this.food.delete(f)
-        }
-        this.placeFood(this.params.init_food) // place food items
+        this.setupStats();
 
         // this.creatures = new Set()
-        for(let c in this.creatures) {
-            this.creatures[c] = undefined
-            delete this.creatures[c]
-        }
+        clearObject(this.creatures)
         i=0;
         let tot = this.params.init_pop;
         // now: generate population based on token system (G1=3, G2=4) --> (3/7, 4/7)
@@ -524,16 +874,16 @@ class World {
             while (i < cur + tot*this.genes[gene].pop/tokens){
                 this.creatureID++
                 this.creatures[this.creatureID] = new Creature(this.creatureID, this.getRandStartingPos(), gene, this.genes[gene].props, this.dim)
+                this.hanldeBirthStats(this.creatures[this.creatureID])
                 i++
             }
             j++
             
         }
 
-        this.day = 0
+        this.currentDay = 0
         this.time = 0
 
-        // this.setupStats();
         this.running = false;
         // this.calculateStats()
         this.newDayStats();
@@ -542,254 +892,96 @@ class World {
         this.resetPainter()
     }
 
-    startNewSim = (days, wait=10, food_change=(f)=>f) => {
+    startNewSim = (days, wait=10) => {
         // start simulating world
 
         for(let a of this.awake) this.awake.delete(a)
 
         // this.newDayStats()
 
-        this.update_period = parseInt(Math.sqrt(days)+1)
+        this.stopDay = this.currentDay + days;
+        this.startDay = this.currentDay;
 
         let day=0;
         this.running = true;
-        let simulation = setInterval(()=>{
-            if(day==days || this.running == false) clearInterval(simulation)
-            this.simDay()
-            // this.newDayStats()
-            // this.drawWorld(ctx)
-            day++
-        },wait)        
-    }
-
-    simDay = (visual=false) => {
-        // console.log('new day!')
-        // let maxD = 8    // distance to food
-        let maxF = 2    // max food capacity
-
-        for(let f of this.food) {
-            // f = null
-            this.food.delete(f)
-        }
-        this.placeFood(this.params.init_food) // place food items
-
-        for(let id in this.creatures) this.awake.add(id)
-
-        // simulate next day
-        // console.log('Num awake:',this.awake.size)
-        while(this.awake.size > 0){
-            // move every awake creature
-            for(let id of this.awake){
-                let res = this.creatures[id].move(this.food) // res = T/F
-                // console.log(res)
-                // res: {alive:?, home:?}
-                // check if can eat food
-                if(this.creatures[id].food < maxF)
-                    for(let f of this.food){
-                        let dx = Math.abs(f.pos.x - this.creatures[id].pos.x)
-                        let dy = Math.abs(f.pos.y - this.creatures[id].pos.y)
-                        let maxD = f.size + this.creatures[id].size
-                        if(dx>maxD || dy>maxD) continue
-                        if(this.creatures[id].pos.distTo(f.pos) <= maxD){
-                            this.creatures[id].eat()
-                            // f = null
-                            // console.log('deleting food')
-                            this.food.delete(f)
-                        }
+        this.intervals.add(
+            setInterval(
+                () => {
+                    if(this.currentDay==this.stopDay || this.running == false) {
+                        // console.log('enough')
+                        this.stopSim();
+                        return;
                     }
-                if(!res){
-                    this.awake.delete(id)
-                }
-            }
-        }
-
-        if(this.running)
-            this.endDay(visual=visual)
-
-        
+                    this.simDay()
+                    // this.newDayStats()
+                    // this.drawWorld(ctx)
+                    // console.log('day',this.currentDay,this.stopDay)
+                    day++
+                },
+                wait
+            )
+        )     
     }
-
-    endDay = (single_day=false,draw=false,visual=false) => {
-        // console.log('before ending:',Object.keys(this.creatures).length)
-        let curIDs = Object.keys(this.creatures)
-        let net = 0;
-        for(let id of curIDs){
-            let c = this.creatures[id]
-            if(c.home()) {
-                if(c.food == 2){
-                    // console.log('birth')
-                    this.creatureID+=1
-                    this.creatures[this.creatureID] = c.reproduce(this.creatureID,this.getRandStartingPos())
-                    net += 1
-                    // birth
-                    // this.hanldeBirthStats(this.creatures[this.creatureID]);
-                    // console.log('Current speed:',c.props.speed.val,'Baby speed:',this.creatures[this.creatureID].props.speed.val)
-                }
-                c.reset()
-            }
-            else {
-                // kill the creature
-                // this.handleDeathStats(this.creatures[id])
-                // console.log('death')
-                net -= 1;
-                this.creatures[id] = undefined
-                delete this.creatures[id]
-                // console.log('killed creature')
-            }
-        }
-        // console.log(`${net} net pop | ${Object.keys(this.creatures).length} remaining`)
-        // console.log('after ending day:',Object.keys(this.creatures).length)
-
-        this.day++
-        this.time = 0
-
-        this.findDominant()
-        this.newDayStats();
-        // this.showStats()
-        if(draw) this.drawWorld()
-        // console.log('ended day')
-    }
-
-    showDayProgress = () => {
-
-
-        this.update_period = 1
-        // let maxD = 8    // distance to food
-        let maxF = 2    // max food capacity
-
-        for(let f of this.food) {
-            // f = null
-            this.food.delete(f)
-        }
-        this.placeFood(this.params.init_food) // place food items
-        for(let id in this.creatures) this.awake.add(id)
-        // simulate next day
-        // console.log('Num awake:',this.awake.size)
-
-        this.running = true;
-        let showDay = setInterval(()=>{
-            this.drawWorld()
-            if(!this.running) console.log('reset')
-            // move every awake creature
-            for(let id of this.awake){
-                // if(id != 10) continue;
-                let res = this.creatures[id].move(this.food)
-                // console.log(res)
-                // res: {alive:?, home:?}
-                // check if can eat food
-                if(this.creatures[id].food < maxF)
-                    for(let f of this.food){
-                        // if(f.holder != null) continue
-                        // if(f.pos == undefined) console.log('yee')
-                        let dx = Math.abs(f.pos.x - this.creatures[id].pos.x)
-                        let dy = Math.abs(f.pos.y - this.creatures[id].pos.y)
-                        let maxD = f.size + this.creatures[id].size
-                        if(dx>maxD || dy>maxD) continue
-                        if(this.creatures[id].pos.distTo(f.pos) <= maxD){
-                            this.creatures[id].eat()
-                            // f = null
-                            // this.food.holder = id;
-                            this.food.delete(f)
-                        }
-                    }
-                if(!res){
-                    // console.log('deleting')
-                    let cr = this.creatures[id]
-                    // console.log(cr.healthy(),cr.home(),cr.pos.magnitude())
-                    // console.log('id',id,'not awake: pos',this.creatures[id].pos.x,this.creatures[id].pos.y,'healthy:',res.healthy,'home:',res.home,'alive:',res.alive)
-                    this.awake.delete(id)
-                }
-            }
-            if(this.awake.size==0 || this.running==false) {
-                // console.log('stopping day sim...')
-                if(this.running) this.endDay(true,false,true)
-                clearInterval(showDay)
-            }
-
-            this.time++
-            this.drawTimer()
-
-        },30)
-
-    }
-
-    resetSimulator = () => {
-        this.running = false;
-        for(let f of this.food.keys()){
-            this.food.delete(f);
-        }
-        for(let f of this.awake.keys()){
-            this.awake.delete(f);
-        }
-        
-        for(let c of Object.keys(this.creatures)){
-            this.creatures[c] = undefined;
-            delete this.creatures[c]
-        }
-        this.drawWorld();
-    }
-
 
 
 }
 
+let init_pop = () => TESTING ? 1 : 100
+let init_food = () => TESTING ? 0 : 100
+let food_freq = () => 1
 
-const W = new World({
-    canvas: world,
-    ctx: ctx,
-    dim: {radius: 300, center: new Vec(0,0)},
-    canvas_size: {x: world.width, y: world.height},
-    painter: {
-        terrains: [
-            {
-                src:'media/terrains/grass.jpeg',
-                ratio:0.2,
-            },
-            {
-                src:'media/terrains/stone.webp',
-                ratio:0.5,
-            },
-            {
-                src:'media/terrains/wall.jpeg',
-                ratio:0.2,
-            },
-        ],
-        borderCheck: (crd,canvas) => {
-            // return !(crd.x < 0 || crd.y < 0 || crd.x >= canvas.width || crd.y >= canvas.height) // rect
-            return new Vec(crd.x,crd.y).distTo(new Vec(canvas.width/2,canvas.width/2)) <= canvas.width/2 * 0.95
-        },
-        boundaryCheck: (rgb) => {
-            return (rgb[0] == 0 && rgb[1] == 0 && rgb[2] == 0)
-        },
-        touchUps: (painter) => {
-            console.log(painter.ctx.strokeStyle)
-            painter.ctx.save();
-            painter.ctx.fillStyle = 'rgb(200,200,200)'
-            painter.ctx.fillRect(0,0,painter.canvas.width,painter.canvas.height);
-            painter.ctx.beginPath();
-            painter.ctx.strokeStyle = 'black'
-            painter.ctx.lineWidth = 5
-            painter.ctx.arc(painter.canvas.width/2+1,painter.canvas.height/2+1,painter.canvas.width/2 * 0.95 + 2.2,0,Math.PI*2);
-            console.log(painter.ctx.strokeStyle)
-            painter.ctx.stroke();
-            painter.ctx.closePath();
-            // console.log('done')
-            painter.ctx.restore();
-        }
-    },
 
-    init_food: 100,
-    init_pop: 100,
-})
+// const W = new World({
+//     canvas: world,
+//     ctx: ctx,
+//     dim: {radius: 300, center: new Vec(0,0)},
+//     canvas_size: {x: world.width, y: world.height},
+//     painter: {
+//         terrains: [
+//             {
+//                 src:'media/terrains/grass.jpeg',
+//                 ratio:0.2,
+//             },
+//             {
+//                 src:'media/terrains/stone.webp',
+//                 ratio:0.5,
+//             },
+//             {
+//                 src:'media/terrains/wall.jpeg',
+//                 ratio:0.2,
+//             },
+//         ],
+//         borderCheck: (crd,canvas) => {
+//             // return !(crd.x < 0 || crd.y < 0 || crd.x >= canvas.width || crd.y >= canvas.height) // rect
+//             return new Vec(crd.x,crd.y).distTo(new Vec(canvas.width/2,canvas.width/2)) <= canvas.width/2 * 0.95
+//         },
+//         boundaryCheck: (rgb) => {
+//             return (rgb[0] == 0 && rgb[1] == 0 && rgb[2] == 0)
+//         },
+//         touchUps: (painter) => {
+//             console.log(painter.ctx.strokeStyle)
+//             painter.ctx.save();
+//             painter.ctx.fillStyle = 'rgb(200,200,200)'
+//             painter.ctx.fillRect(0,0,painter.canvas.width,painter.canvas.height);
+//             painter.ctx.beginPath();
+//             painter.ctx.strokeStyle = 'black'
+//             painter.ctx.lineWidth = 5
+//             painter.ctx.arc(painter.canvas.width/2+1,painter.canvas.height/2+1,painter.canvas.width/2 * 0.95 + 2.2,0,Math.PI*2);
+//             console.log(painter.ctx.strokeStyle)
+//             painter.ctx.stroke();
+//             painter.ctx.closePath();
+//             // console.log('done')
+//             painter.ctx.restore();
+//         }
+//     },
 
-document.addEventListener('keydown', e => {
-    if(e.key == 'r'){
-        W.showDayProgress()
-    }
-    if(e.key == '1'){
-        W.startNewSim(2,1)
-    }
-    if(e.key == '2'){
-        W.startNewSim(100,1)
-    }
-})
+//     food_frequency: food_freq(),
+//     init_food: init_food(),
+//     init_pop: init_pop(),
+
+// })
+
+
+// setTimeout(()=>{
+//     W.loadGeneData()
+// },10)

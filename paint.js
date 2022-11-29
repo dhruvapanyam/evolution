@@ -130,10 +130,15 @@ class paintCanvas{
 
     }
 
-    reset = () => {
+    reset = (complete=false) => {
         this.ctx.fillStyle = 'rgba(200,200,200,1)';
         this.ctx.fillRect(0,0,this.sx,this.sy);
-        // this.saveImage();
+        if(complete){
+            this.paintTouchUps();
+            // alert('hi')
+            this.saveImage();
+            // return;
+        }
         this.loadImage()
         // this.paintTouchUps()
     }

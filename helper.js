@@ -78,15 +78,12 @@ function randVec(l=1,ang=Math.random()*Math.PI*2){
 
 
 
-var maxSpeed = 10;
-var simMetadata = {
-    days: 50,
-    TTLratio: 300,
-    speedTTLexp: 1.3
-}
+var maxTime = 200;
+var maxFood = 2;
 
-
-
+var TESTING;
+TESTING = true;
+TESTING = false;
 
 
 
@@ -113,6 +110,29 @@ var features = {
         mut_inc: 0.5,
         def_mut: 0.1
     },
+}
+
+//TESTING
+for(let p in features) features[p].def_mut = 0.2
+
+const propIndex = (f) => {
+    propNames.indexOf(f)
+}
+
+const roundTraitValue = (val) => {
+    // let mult = Math.round(val / features[f].mut_inc);
+    // let res = mult * features[f].mut_inc
+    // console.log(val,res)
+    // return res;
+    return Math.round(val*100)/100
+}
+
+
+const clearObject = (obj) => {
+    for(let key of Object.keys(obj)){
+        obj[key] = undefined;
+        delete obj[key];
+    }
 }
 
 
@@ -148,4 +168,11 @@ function download(content, fileName, contentType) {
     a.href = URL.createObjectURL(file);
     a.download = fileName;
     a.click();
+}
+
+
+function randomPointInCircle(center,radius){
+    let r = radius * Math.sqrt(Math.random())
+    let theta = Math.random() * Math.PI * 2
+    return new Vec(center.x + r*Math.cos(theta), center.y + r*Math.sin(theta))
 }
