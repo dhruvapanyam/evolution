@@ -78,7 +78,7 @@ function randVec(l=1,ang=Math.random()*Math.PI*2){
 
 
 
-var maxTime = 200;
+var maxTime = 300;
 var maxFood = 2;
 
 var TESTING;

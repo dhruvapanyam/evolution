@@ -447,7 +447,7 @@ class World {
 
             this.ctx.font = '10px serif'
             this.ctx.fillStyle = 'red'
-            this.ctx.fillText(id, this.canvas.width/2+f.pos.x*scale,this.canvas.height/2+f.pos.y*scale-10)
+            // this.ctx.fillText(id, this.canvas.width/2+f.pos.x*scale,this.canvas.height/2+f.pos.y*scale-10)
 
             // let col = 'rgb(255,'+String(255 - f.props.speed.value*(255)/(maxSpeed-1))+',0)'
             // c.fillStyle = col;
@@ -492,7 +492,7 @@ class World {
         this.ctx.beginPath()
         this.ctx.moveTo(x,y)
         this.ctx.arc(x,y,r, -Math.PI/2, Math.PI*2*percent-Math.PI/2)
-        this.ctx.fillStyle = 'red'
+        this.ctx.fillStyle = 'rgb(100,100,100)'
         this.ctx.fill()
 
         this.ctx.font = '10px serif'
@@ -581,44 +581,33 @@ class World {
 
     loadGeneData = (str=null) => {
 
-        let gene_data;
-        if(str == null){
-            gene_data = JSON.parse(
-                // `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(223,135,97,0.6)","img":"media/blob_draw/orange.png","colorName":"orange","props":{"speed":{"value":5,"mutation_chance":0},"stamina":{"value":5,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0},"gps":{"value":5,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1},"Gene2":{"name":"Gene2","inUse":true,"color":"rgb(64,170,216,0.6)","img":"media/blob_draw/blue.png","colorName":"blue","props":{"speed":{"value":8,"mutation_chance":0},"stamina":{"value":4,"mutation_chance":0},"vision":{"value":5,"mutation_chance":0.3},"gps":{"value":3,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1}}`
-                // `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(223,135,97,0.6)","img":"media/blob_draw/orange.png","colorName":"orange","props":{"speed":{"value":2,"mutation_chance":0},"stamina":{"value":10,"mutation_chance":0},"vision":{"value":8,"mutation_chance":0},"gps":{"value":5,"mutation_chance":0},"greed":{"value":5,"mutation_chance":0}},"pop":1}}`
-                `{"Gene1":{"name":"Gene1","inUse":true,"color":"rgb(64,170,216,0.6)","img":"media/blob_draw/blue.png","colorName":"blue","props":{"speed":{"value":6,"mutation_chance":0.2},"stamina":{"value":6,"mutation_chance":0.2},"vision":{"value":6,"mutation_chance":0.2},"gps":{"value":6,"mutation_chance":0.2},"greed":{"value":6,"mutation_chance":0.2}},"pop":1}}`
-            )
-        }
+        if(str != null) this.setGeneData(JSON.parse(str));
         else{
-            gene_data = JSON.parse(str)
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.onchange = e => { 
+    
+                // getting a hold of the file reference
+                var file = e.target.files[0]; 
+             
+                // setting up the reader
+                var reader = new FileReader();
+                reader.readAsText(file,'UTF-8');
+             
+                // here we tell the reader what to do when it's done reading...
+                reader.onload = readerEvent => {
+                   var content = readerEvent.target.result; // this is the content!
+                //    console.log( content );
+                    var gene_data = JSON.parse(content);
+                    this.setGeneData(gene_data)
+                }
+             
+            }
+             
+             input.click();
+    
         }
-
-
-        this.setGeneData(gene_data);
-
-        // var input = document.createElement('input');
-        // input.type = 'file';
-        // input.onchange = e => { 
-
-        //     // getting a hold of the file reference
-        //     var file = e.target.files[0]; 
-         
-        //     // setting up the reader
-        //     var reader = new FileReader();
-        //     reader.readAsText(file,'UTF-8');
-         
-        //     // here we tell the reader what to do when it's done reading...
-        //     reader.onload = readerEvent => {
-        //        var content = readerEvent.target.result; // this is the content!
-        //     //    console.log( content );
-        //         var gene_data = JSON.parse(content);
-        //         this.setGeneData(gene_data)
-        //     }
-         
-        // }
-         
-        //  input.click();
-
+        
         
 
         
@@ -630,6 +619,7 @@ class World {
         }
         let j=0;
         allTrends.data.datasets = [];
+        allTrends.data.labels = [];
         for(let f in trendCharts){
 
             // TREND GRAPHS

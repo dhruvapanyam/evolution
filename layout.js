@@ -89,9 +89,9 @@ function createGeneStatsCol(n){
         let s = `
         
                 <div class="row">
-                    <div class="col s4" style="cursor:pointer;" onclick="setMutation(${n},'${f}','${fname}')">
-                    <div style="float:left;" class="prop-icon"><img class="icon-img" src="media/icons/${f}.png" width="25"></div>
-                    <div style="float:left;" id="prop-name-${f}-${n}"><b>${fname}</b></div>
+                    <div class="col s4 tooltip tooltipped" data-html="true" data-position="top" data-tooltip="${tooltipInfo[f]}" style="cursor:pointer;" onclick="setMutation(${n},'${f}','${fname}')">
+                        <div style="float:left;" class="prop-icon"><img class="icon-img" src="media/icons/${f}.png" width="25"></div>
+                        <div style="float:left;" id="prop-name-${f}-${n}"><b>${fname}</b></div>
                     </div>
                     <div class="col s7">
                         <div class="input-circles input-circles-${n}" style="color:${gcols[tempGeneData[n].col]};">
@@ -113,6 +113,7 @@ function createGeneStatsCol(n){
         return s;
 
     }
+    
     d.innerHTML += `
     
     <div id="gene-stats-${n}" style="display:none;">
@@ -165,23 +166,22 @@ function createGeneStatsCol(n){
             <div class="">
                 Tokens left:&nbsp;&nbsp;<b id="tokens-left-${n}">30</b><br>
                 Shelf Life:&nbsp;&nbsp;<b id="shelf-life-${n}"></b>&nbsp;timex<br>
-                Initial Ratio:&nbsp;&nbsp;<input oninput="setInitPop(${n},this.value)" style="width:40px" type="number" min=0 max=10 value=1>
+                Initial Ratio:&nbsp;&nbsp;<input id="${n}-set-init-pop" oninput="setInitPop(${n},this.value)" style="width:40px" type="number" min=0 max=10 value=1>
             </div>
         </div>
         <div class="col s4 cent">
-            <i class="material-icons tooltipped" data-html="true" data-position="left" 
+            <i class="material-icons tooltip tooltipped" data-html="true" data-position="bottom" 
             data-tooltip="
-                info<br>
-                > Stamina is not linearly calculated<br>
-                > Unused tokens will be used to extend TTL<br>
-                > Have fun
+                Have fun!
             " 
             style="font-size: 30px; color: lightgrey; cursor: pointer;">info</i>
-            <i onclick="deleteGene(${n})" class="material-icons" style="font-size: 30px; color: grey; cursor: pointer;">delete</i>
+            <i onclick="deleteGene(${n})" class="material-icons tooltip tooltipped" data-tooltip="Remove gene" style="font-size: 30px; color: grey; cursor: pointer;">delete</i>
         </div>
     </div>
     `
 
+
+    M.Tooltip.init(document.querySelectorAll(`.tooltip`),{})
 
     for(let f of propNames){
         setGenePropScore(n,f,6)
@@ -198,6 +198,7 @@ function changeGeneName(n,v){
 
 function setInitPop(n,v){
     tempGeneData[n].init_pop = parseInt(v);
+    // document.getElementById(`${n}-set-init-pop`).value = v;
     calculateInitPop()
 }
 
@@ -477,6 +478,25 @@ function showGeneData(genes){
             </div>
         `
     }
+}
+
+// Tooltips
+var tooltipInfo = {
+    'speed': `<p><u>Speed</u> determines the distance traveled by your blobs per time-step.
+            <br>
+            (Click to toggle mutation)</p>`,
+    'stamina': `<p><u>Stamina</u> determines how long your blobs can survive each day.
+            <br>
+            (Click to toggle mutation)</p>`,
+    'vision': `<p><u>Vision</u> determines how far your blobs can see.
+            <br>
+            (Click to toggle mutation)</p>`,
+    'gps': `<p><u>GPS</u> determines how easily your blobs can find their way home.
+            <br>
+            (Click to toggle mutation)</p>`,
+    'greed': `<p><u>Greed</u> determines how likely your blobs look for more food rather than go home.<br>(Note: a blob needs 1 food to survive the night, and 2 food to reproduce)
+            <br>
+            (Click to toggle mutation)</p>`,
 }
 
 

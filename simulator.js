@@ -169,13 +169,13 @@ class Simulator extends World{
             let res = c.move(this.food,this.food_cells)
 
             if(draw){
-                let scale = this.canvas.width/2 * 0.95 / this.dim.radius
-                this.ctx.beginPath()
-                this.ctx.moveTo(c.pos.x*scale+this.canvas.width/2,c.pos.y*scale+this.canvas.height/2)
-                this.ctx.lineTo(c.spawn.x*scale+this.canvas.width/2,c.spawn.y*scale+this.canvas.height/2)
-                this.ctx.strokeStyle = 'red'
-                this.ctx.stroke()
-                this.ctx.closePath()
+                // let scale = this.canvas.width/2 * 0.95 / this.dim.radius
+                // this.ctx.beginPath()
+                // this.ctx.moveTo(c.pos.x*scale+this.canvas.width/2,c.pos.y*scale+this.canvas.height/2)
+                // this.ctx.lineTo(c.spawn.x*scale+this.canvas.width/2,c.spawn.y*scale+this.canvas.height/2)
+                // this.ctx.strokeStyle = 'red'
+                // this.ctx.stroke()
+                // this.ctx.closePath()
             }
 
 
@@ -302,7 +302,3 @@ const W = new Simulator({
 
 })
 
-
-setTimeout(()=>{
-    W.loadGeneData()
-},10)
