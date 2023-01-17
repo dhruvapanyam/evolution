@@ -40,7 +40,7 @@ Currently, there are 5 traits that are associated with a certain group:
 
 When designing a gene, it is provided with a number of tokens for the various traits. The number of tokens distributed to a trait determines the normalized value of that trait for the gene.
 
-image
+![](media/gene_design.png)
 
 ## Usage
 
