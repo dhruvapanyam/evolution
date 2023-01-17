@@ -8,7 +8,7 @@ The simulator is a tool to implement a stripped-down basic demonstration of popu
 a world with a population of their choice, and simulate this world for 100s of days. The current project version allows one to view the trends and history
 of the various genes and traits present in the population.
 
-image
+![](media/webpage.png)
 
 ### World Mechanism
 
@@ -16,7 +16,7 @@ Each day, there are a number of food items placed randomly in the world, and eac
 When the simulation of the day begins, the blobs move around in search of food. The different trait values for each blob's gene influences the movement
 and strategies of the blob.
 
-gif
+![](media/sim_gif.gif)
 
 If a blob makes it back to their home with at least one food item, they will survive until the next day. Further, if the blob collects 2 food items, they
 will produce an offspring with the same gene make-up.
