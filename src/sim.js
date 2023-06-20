@@ -1,16 +1,22 @@
+// Main code for logic and environment setup
+// ----------------------------------------------------------------------
 
+
+// World canvas setup
 const world = document.getElementById('world')
 let world_ht = 1
 world.width = window.innerHeight * world_ht
 world.height = world.width
 
-
+// World context
 const ctx = world.getContext('2d',{willReadFrequently:true})
 
 
 
+// Food --> individual food item spawned in the world
 class Food {
     constructor(id,pos,size=2,col='yellow'){
+        // display & env properties
         this.id = id
         this.pos = pos;
         this.size = size;
@@ -19,56 +25,59 @@ class Food {
     }
 }
 
+// Creature --> individual creature alive in the world
+// 
+// methods: move, tryEating, eat, healthy?, home?, reproduce, boostTrait, onSuccess, ...
+//
 class Creature {
     constructor(id,pos,gene,props,dim){
         this.id = id
         this.pos = pos
-        this.gene = gene
-        this.props = JSON.parse(JSON.stringify(props));
+        this.gene = gene // gene name of creature, used to obtain other properites
+        this.props = JSON.parse(JSON.stringify(props)); // feature properties and mutation settings
+        // parsing json
         for(let f in this.props){
             this.props[f].value = parseFloat(this.props[f].value)
             this.props[f].mutation_chance = parseFloat(this.props[f].mutation_chance)
         }
         // console.log(this.props.speed.value,this.init_ttl)
-        this.dim = dim
-        // this.init_ttl = Math.floor(Math.pow(D / this.props.speed.value, simMetadata.speedTTLexp)) * this.dim.radius/300
-        // this.init_ttl = this.props.stamina.value * Math.floor(maxTime/20) + (maxTime/2);
-        // this.ttl = this.init_ttl
-        this.ang = this.pos.angleTo(this.dim.center) + (Math.random()*2-1)*Math.PI/2
-        // this.ang = this.pos.angleTo(dim.center)
-        // this.ang = Math.random()*Math.PI*2
 
+        this.dim = dim  // dimensions of current inhabited world
+
+        // begin with a random angle to face towards the world
+        this.ang = this.pos.angleTo(this.dim.center) + (Math.random()*2-1)*Math.PI/2
+
+        // spawn point (home)
         this.spawn = this.pos.copy()
 
 
-        
 
-        this.food = 0
-        this.size = 5
-
-
-        this.sight = 0.5
-        this.fov = this.sight
+        this.food = 0   // current amt of food
+        this.size = 5   // radius of blob
 
 
-        this.maxTokens = 30;
+        this.sight = 0.5    // base angle of view (fov)
+        this.fov = this.sight // modified dynamic fov (depending on status)
 
-        this.target = {
+
+        this.maxTokens = 30;    // trait token limit
+
+        this.target = {     // current ambition of creature: could be looking for (food, home)
             looking_for: 'food',
-            pos: null,
-            fid: null
+            pos: null,  // position of identified target
+            fid: null   // identified food item
         }
 
-        this.norm_props = {}
+        this.norm_props = {}    // normalized props to [0,10]
         this.normalizeProps();
 
-        this.init_ttl = this.norm_props.stamina.value;
-        this.ttl = this.init_ttl;
+        this.init_ttl = this.norm_props.stamina.value;  // time to live (shelf life) <--- stamina
+        this.ttl = this.init_ttl; // current ttl, reduces every timestep
 
-        this.age = 0;
+        this.age = 0;   // no. of days survived
 
-        // console.log(this.ttl)
 
+        // debug settings
         if(TESTING){
             this.pos = new Vec(dim.center.x,dim.center.y)
             this.spawn = new Vec(dim.radius,0);
@@ -78,6 +87,8 @@ class Creature {
 
     }
 
+    // set all feature scales to normalized appropriate world amounts
+    // based on evidence and size of world
     normalizeProps = () => {
         clearObject(this.norm_props);
 
@@ -85,7 +96,7 @@ class Creature {
             let v;
             switch(f){
                 case 'speed':
-                    v = this.props[f].value * 0.8; break;
+                    v = this.props[f].value * 0.8; break;   
                 case 'stamina':
                     v = this.props[f].value * Math.floor(maxTime/10); break;
                 case 'vision':
@@ -104,11 +115,11 @@ class Creature {
         }
     }
 
+    // reset relevant params upon surviving the day
     daySuccess = () => {
         this.ttl = this.init_ttl
         this.age += 1;
-        this.ang = this.pos.angleTo(this.dim.center) + (Math.random()*2-1)*Math.PI/2
-        // this.ang = Math.random()*Math.PI
+        this.ang = this.pos.angleTo(this.dim.center) + (Math.random()*2-1)*Math.PI/2 // random starting angle
         this.food = 0
         this.fov = this.sight
         this.spawn = this.pos.copy()
@@ -117,12 +128,18 @@ class Creature {
         this.target.fid = null;
     }
 
+    // find nearby food using vision strength and FOV
     nearbyFood = (food_cells,close=null) => {
         // 2d array of sets
         // look through surrounding cells of enough length
         let world_size = this.dim.radius*2;
+
+        // Grid System -------------------
+        // to optimize searching for food, we design a grid system and load each food item's location in the correct grid cell
+        // when a creature searches for food, we only need to search the surrounding grid cells lying within the FOV
         let grid_size = world_size / food_cells.length;
         let grid_search_range = (close!=null) ? 1 : Math.ceil(this.props.vision.value / grid_size);
+
         let x=this.pos.x, y=this.pos.y
         let gridX = Math.floor((x+world_size/2)*food_cells.length / (world_size))
         let gridY = Math.floor((y+world_size/2)*food_cells.length / (world_size))
@@ -137,23 +154,33 @@ class Creature {
         return res;
     }
 
+    // Most important logic
+    // Determines movement and tick-based functions to perform
     move = (food,food_cells) => {
 
-        let speed_slower = 1;
+        let speed_slower = 1;   // modify speed based on conditions
 
+        // If in search of food,
+        // --------------------------------------------------
         if(this.target.looking_for == 'food'){
             // console.log('foodie')
+
+            // if no food has been identified,
+            // look for nearest reachable food item
             if(this.target.fid == null){
-                let foodID = this.nearbyFood(food_cells);
+                let foodID = this.nearbyFood(food_cells); // find nearest reachable food
 
                 if(this.food < 2){
                     for(let fid of foodID){
-                        if(food[fid] == undefined) continue;
+                        if(food[fid] == undefined) continue; // for example, if another blob has already taken the food identified
                         let f = food[fid]
                         // console.log(fid,f)
+
+                        // check if food is visible in this timestep
                         let dx = Math.abs(f.pos.x - this.pos.x)
                         let dy = Math.abs(f.pos.y - this.pos.y) // scaling
                         if(dx>this.norm_props.vision.value || dy>this.norm_props.vision.value) continue 
+                        // if food item is visible, update target props
                         if(this.pos.distTo(f.pos) <= this.norm_props.vision.value && ((Math.PI*2 + this.ang - this.pos.angleTo(f.pos))%(Math.PI*2) < this.sight)){ // fov = 0.6
                             this.target.looking_for = 'food'
                             this.target.pos = f.pos
@@ -166,6 +193,7 @@ class Creature {
                         }           
                     }
                 }
+                // if target food item is null, face a random direction within fov
                 if(this.target.fid == null)
                     this.ang += (Math.random()*2-1) * this.fov
             }
@@ -188,6 +216,7 @@ class Creature {
             // console.log(ang_to_spawn)
             let dist_to_spawn = this.pos.distTo(this.spawn);
 
+            // GPS influence --> create uncertainty and error in target direction --> lowers speed, and increases angle variability
             if(this.target.pos == null){
                 // create error in position belief
 
@@ -197,14 +226,15 @@ class Creature {
                 // this.ang = pseudo.angleTo(this.spawn)
 
                 let min_speed = 0.2
-                speed_slower = min_speed + this.norm_props.gps.value * (1-min_speed);
-                let coin1 = Math.random()*2 - 1;
+                speed_slower = min_speed + this.norm_props.gps.value * (1-min_speed); // reduce speed based on gps confidence
+                let coin1 = Math.random()*2 - 1; // tossing a continuous coin [-1,1]
                 let min_err = Math.PI/8;
                 let err_range = Math.PI*1 - min_err
-                let ang_err = (coin1 * err_range) + min_err
+                let ang_err = (coin1 * err_range) + min_err // generate angular error based on coin flip with constant error range
                 // // let coin2 = Math.random();
 
                 // // error reduces with distance?
+                // ie, closer you are to the target, lower the error impacted
                 let err = ang_err * (1-this.norm_props.gps.value) //* Math.min(1,Math.pow(dist_to_spawn / this.dim.radius,0.2))
                 this.ang += err
             }
@@ -212,31 +242,35 @@ class Creature {
         }
 
 
-        let step = randVec(this.norm_props.speed.value * speed_slower, this.ang)
-        this.pos.add(step)
-        this.pos = this.pos.bordered(this.dim)
+        let step = randVec(this.norm_props.speed.value * speed_slower, this.ang) // not actually random, specified distance and angle
+        this.pos.add(step)  // move by `step`
+        this.pos = this.pos.bordered(this.dim) // control the boundary limits of the creature
         // console.log('move',this)
         this.ttl--
         // if(this.ttl == 0) console.log('dead :(')
 
-        // return whether can move again
+        // return whether creature can move again
         return (!this.home() && this.alive())
+        // if ttl > 0 and not home yet, returns TRUE
+        // if dead, or reached home, returns FALSE
     }
 
+    // attempt to eat food item in `target` property
     tryEating = (food,food_cells) => {
         if(this.target.looking_for != 'food') return null;
         if(this.target.fid == null) return null;
-        // let fIds = this.nearbyFood(food_cells,1);
-        // let maxD = this.size + ;
+
         let fid = this.target.fid
         // console.log(this.id,'wants food',fid,food[fid])
+        // check distance constraint
         if(this.pos.distTo(food[fid].pos) > this.size + food[fid].size) return null;
-            // else, eat
+        // else, eat
         // console.log(this.id,'eating',fid)
         this.eat()
         return fid;
     }
 
+    // Eat food item, and update ambitions
     eat = () => {
         this.food += 1
         this.target.pos = null;
@@ -245,68 +279,71 @@ class Creature {
         // console.log('eating')
         
         // choose whether to go back home
-        let r = Math.random()
-        // this.fov = this.sight;
-        if(r > this.norm_props.greed.value || this.food==2){
+        // Greed influence
+        let r = Math.random()   // toss a biased coin based on props.greed.value
+
+        if(r > this.norm_props.greed.value || this.food==2){    // if already has 2 food, or coin fails, look for home
             this.fov = this.sight * (1-this.norm_props.gps.value)
             this.fov = 0
             this.ang = this.pos.angleTo(this.spawn)
             // console.log(this.id,'going home')
             this.target.looking_for = 'home';
         }
-        else{
+        else{   // otherwise, considered greedy, looks for more food
             // console.log(this.id,'greedy')
             this.target.looking_for = 'food';
         }
-
-        
     }
 
     alive = () => {return this.ttl > 0}
     healthy = () => {return this.food > 0}
     home = () => {
         // returns whether back home healthy
-        // console.log(this.pos.x,this.pos.y)
-        // console.log('home',this.healthy(),this.pos.magnitude())
-        // if(this.pos.x < 1) console.log(this.healthy() && this.pos.x==0)
-        // return (this.healthy() && Math.abs(this.pos.distTo(this.dim.center)-this.dim.radius) < 1)
-
-        // instead, check if at spawn point
+        // check if at spawn point
         return (this.healthy() && Math.abs(this.pos.distTo(this.spawn)) < this.size/2)
     }
 
+    // compute feature token total
     energyUsed = () => {
         let s=0;
         for(let prop in this.props) s += this.props[prop].value;
         return s;
     }
 
-    boostTrait = (prop, direction) => {
+    // handle MUTATION
+    // if a trait mutates, it uses up excess energy, so other traits must be reduced
+    boostTrait = (prop, direction) => { // direction = upwards or downwards
         let v = this.props[prop].value;
         let change = features[prop].mut_inc
         let new_val = roundTraitValue(v + (direction*change))
-        this.props[prop].value = Math.max(Math.min(10, new_val),0)
+        this.props[prop].value = Math.max(Math.min(10, new_val),0) // bound to [0,10]
 
         // console.log(`New ${prop}:${v}->${this.props[prop].value}`)
+
+
+        // if too much energy used, damage other traits
         if(this.energyUsed() > this.maxTokens){
             let rand_prop;
             let ps = Object.keys(this.props);
             do{
-                rand_prop = ps[Math.floor(Math.random()*ps.length)];
-                while(this.props[rand_prop].value > 0 && this.energyUsed() > this.maxTokens){
+                rand_prop = ps[Math.floor(Math.random()*ps.length)]; // choose a random trait to damage
+                while(this.props[rand_prop].value > 0 && this.energyUsed() > this.maxTokens){ // reduce the value of this trait 
                     let val = this.props[rand_prop].value
                     this.props[rand_prop].value = roundTraitValue(val-features[rand_prop].mut_inc)
                 }
                 // console.log(`Damaging ${rand_prop}`)
             } while(this.energyUsed()>this.maxTokens)
         }
+        // after mutation handling, normalize props to fit the world sim
         this.normalizeProps();
     }
 
+    // if 2 foods, and day success, reproduce an offspring
     reproduce = (id,pos) => {
         let offspring = new Creature(id,pos,this.gene,this.props,this.dim)
+        // for each feature, try mutating (using mutation_chance)
         for(let f in offspring.props){
-            let coin = Math.random() < offspring.props[f].mutation_chance; // bool
+            let coin = Math.random() < offspring.props[f].mutation_chance; // biased coin toss (mutation_chance)
             let dir = Math.round(Math.random())*2 - 1 // + or - 1
 
             if(coin){
@@ -320,6 +357,9 @@ class Creature {
 
 
 
+// Class World ---> defines world properties, display functions, simulation settings, paint features
+// 
+// Handles stats and graph syncing
 
 class World {
     constructor(params){

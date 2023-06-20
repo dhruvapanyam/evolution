@@ -1,8 +1,9 @@
-// const canvas = document.getElementById('paint-canvas')
-// const ctx = canvas.getContext('2d',{
-//     willReadFrequently: true
-// })
-
+// Class to provide paint functionality to a world
+//
+// Functions: 
+//      Draw region boundaries
+//      BFS paint different regions
+//      Select terrain patterns to fill
 
 class paintCanvas{
     constructor(canvas,ctx,size,params=null){
@@ -18,6 +19,10 @@ class paintCanvas{
         this.ctx.lineWidth = 3
         this.ctx.fillStyle = 'grey'
 
+
+// Terrain Painting
+// ------------------------------------
+
         this.terrains = null;
         if(params) this.terrains = params.terrains;
         // console.log(this.terrains)
@@ -25,15 +30,18 @@ class paintCanvas{
         this.patterns = []
         // this.patternRatio = 0.5;
         
+        // load images for each terrain object passed as parameter
         if(this.terrains != null){
             var pattern;
+            // create a canvas element for each terrain, draw image on it, save the image
             for(let terrain of this.terrains){
                 let patternCanvas = document.createElement("canvas");
                 
                 // // load image approach
                 const img = new Image();
-                // console.log('media/terrains/grass.jpeg')
                 img.src = terrain.src;
+
+                // styling and loading properties for terrain display
                 img.onload = () => {
                     let patternSize = Math.floor(img.width * terrain.ratio);
                     patternCanvas.width = patternSize
@@ -75,14 +83,15 @@ class paintCanvas{
 
         }
 
+        // handle user selection of a terrain
         this.selectTerrain = (src) => {
             let pat = this.patterns.filter(x=>x.src==src)
             if(pat.length == 0) return;
-            this.selectedTerrain = pat[0];
+            this.selectedTerrain = pat[0]; // contains currently selected terrain
         }
 
-        // this.ctx.fillRect(0,0,this.sx,this.sy)
         
+// -------------------------------------------------------
 
         this.newLine = true;
         this.mousedown = false
@@ -143,6 +152,7 @@ class paintCanvas{
         // this.paintTouchUps()
     }
 
+    // get canvas coordinate from a mouse click or move event
     _getCanvasCoordinate = (e) => {
         var rect = this.canvas.getBoundingClientRect() // abs. size of element
         let scaleX = this.canvas.width / rect.width    // relationship bitmap vs. element for x
@@ -158,6 +168,7 @@ class paintCanvas{
         return crd;
     }
 
+    // when in hover mode, reduce opacity of hovered region in the paint canvas, using mouse coordinates
     hoverRegion = (e) => {
         let crd = this._getCanvasCoordinate(e)
         // if(crd == null || !this._worldContains(crd)) return;
@@ -208,11 +219,12 @@ class paintCanvas{
         }
 
         
-
+        // if in draw mode, and user is holding mouse down
         if(this.mousedown && this.drawing){
             let crd = this._getCanvasCoordinate(e)
             if(crd == null) return;
 
+            // if starting a new line, begin a path
             if(this.newLine){
                 this.newLine = false;
                 // console.log('resetting')
@@ -220,6 +232,7 @@ class paintCanvas{
                 this.ctx.beginPath()
                 this.ctx.moveTo(crd.x,crd.y)
             }
+            // if not, draw a small segment to the new coordinates
             else{
                 // this.regions[this.regions.length-1].lineTo(crd.x,crd.y)
                 this.ctx.lineTo(crd.x,crd.y)
@@ -234,11 +247,10 @@ class paintCanvas{
             
             // this.ctx.stroke()
         }
-
-        
             
     }
 
+    // generate BFS edges for a given pixel (in a 3x3 grid around the center pixel)
     _edges = (i,j) => {
         let res = []
         for(let p=-1;p<=1;p++){
@@ -251,12 +263,14 @@ class paintCanvas{
         return res;
     }
 
+    // check if a given pixel is part of the boundary of any region (uses the fact that white lines are drawn)
     _isBoundary = (i,j,img,verbose=false) => {
         let white = (img.data[4*(i*this.sx + j)] + img.data[4*(i*this.sx + j) + 1] + img.data[4*(i*this.sx + j) + 2])
         if(verbose) console.log(white==255*3)
         return white == 255*3
     }
 
+    // replace a pixel with a colour
     _paintPixel = (i,j,col,img) => {
         img.data[4*(i*this.sx + j)+0] = col[0]
         img.data[4*(i*this.sx + j)+1] = col[1]
@@ -264,9 +278,11 @@ class paintCanvas{
         img.data[4*(i*this.sx + j)+3] = col[3]
     }
 
+    // BFS implementation to identify regions after boundaries have been drawn
     findRegions = () => {
         var img = this.ctx.getImageData(0,0,this.sx,this.sy);
 
+        // clearing previous region data
         for(let p of Object.keys(this.regionOfPoint)){
             this.regionOfPoint[p] = null;
             delete this.regionOfPoint[p]
@@ -276,13 +292,12 @@ class paintCanvas{
             delete this.pointsofRegion[r]
         }
         
-        // console.log(img.data.length/4)
-        
-
+        // BFS setup
         let Q = []
         let visited = new Set()
         let num_regions = 0;
         
+        // iterate through entire image
         for(let i=0; i<=this.sy; i+=1){
             for(let j=0; j<=this.sx; j+=1){
                 if(!this._worldContains({x:j,y:i})) continue;
@@ -296,17 +311,18 @@ class paintCanvas{
                 col.push(255);
                 num_regions += 1
 
-                this.pointsofRegion[num_regions] = []
-                this.boundaryOfRegion[num_regions] = []
+                this.pointsofRegion[num_regions] = []   // contains all points within the region
+                this.boundaryOfRegion[num_regions] = [] // contains all boundary points of a region
 
                 // console.log('new component! col:',col)
                 Q.push([i,j])
                 visited.add(i*this.sx + j);
+                // BFS loop
                 while(Q.length > 0){
                     let node = Q.shift();
                     let x = node[0]
                     let y = node[1]
-                    this.regionOfPoint[x*this.sx + y] = num_regions;
+                    this.regionOfPoint[x*this.sx + y] = num_regions;    // contains region of a given point
                     this.pointsofRegion[num_regions].push(x*this.sx + y)
                     
                     for(let e of this._edges(x,y)){
@@ -328,6 +344,8 @@ class paintCanvas{
         this.saveImage()
     }
 
+    // manipulates Canvas' imgdata flattened array
+    // uses mouse click coordinates to identify region
     paintRegion = (e) => {
         let crd = this._getCanvasCoordinate(e)
         console.log(crd)
@@ -336,6 +354,7 @@ class paintCanvas{
             return;
         }
         else{
+            // identify which region
             reg = this.regionOfPoint[Math.floor(crd.y)*this.sx + Math.floor(crd.x)]
         }
 
@@ -348,6 +367,7 @@ class paintCanvas{
 
         // console.log('painting region',reg,pat_img)
         
+        // paint each pixel in region
         for(let point of this.pointsofRegion[reg]){
             let y = point % this.sx
             let x = Math.floor(point / this.sx)
@@ -364,5 +384,3 @@ class paintCanvas{
     }
 
 }
-
-// var Paint = new paintCanvas(canvas,ctx,{x:1300,y:700})

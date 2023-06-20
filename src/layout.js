@@ -1,4 +1,14 @@
+// Main frontend handlers and listeners
+// ----------------------------------------------------------------------
+
+
 let propNames = ['speed','stamina','vision','gps','greed']
+
+
+
+
+// World Gene Setup Screen
+// -----------------------------------
 
 var geneId = -1
 var tempGeneData = {}
@@ -18,6 +28,7 @@ var gcol_names = Object.keys(gcols)
 
 // let tcols = ['rgba(223,135,97,0.4)','rgba(151,145,234,0.4)','rgba(57,176,93,0.4)','rgba(242,125,138,0.4)','rgba(99,158,222,0.4)']
 // let hue_rots = [0,230,460,690,920]
+
 
 function createNewGene(){
 
@@ -58,10 +69,11 @@ function createNewGene(){
     return geneId;
 }
 
+// given population shares, calcluate absolute population splitup
 function calculateInitPop(){
     let s = 0
     for(let id in tempGeneData){
-        s += tempGeneData[id].init_pop
+        s += tempGeneData[id].init_pop  // shares
     }
 
     let i=0;
@@ -72,6 +84,8 @@ function calculateInitPop(){
     popPie.update()
 }
 
+
+// select gene to update
 function selectGeneImg(n){
     activeGeneImg = n;
     // console.log('new active gene:',n)
@@ -83,6 +97,7 @@ function selectGeneImg(n){
     }
 }
 
+// display for token system per gene
 function createGeneStatsCol(n){
     let d = document.getElementById('modal-stats-div')
     function _createInps(f,fname){
@@ -114,6 +129,7 @@ function createGeneStatsCol(n){
 
     }
     
+    // info for each feature, and category
     d.innerHTML += `
     
     <div id="gene-stats-${n}" style="display:none;">
@@ -181,14 +197,18 @@ function createGeneStatsCol(n){
     `
 
 
-    M.Tooltip.init(document.querySelectorAll(`.tooltip`),{})
+    M.Tooltip.init(document.querySelectorAll(`.tooltip`),{})    // setup tooltip activation
 
     for(let f of propNames){
-        setGenePropScore(n,f,6)
+        setGenePropScore(n,f,6) // initialize feature tokens to 6 each
     }
 
     setGeneColor(n,tempGeneData[n].col)
 }
+
+
+// Gene Property Settings
+// ----------------------------
 
 function changeGeneName(n,v){
     tempGeneData[n].gname = v;
@@ -285,6 +305,9 @@ function deleteGene(n){
     }
 }
 
+// Population distribution graph
+// ------------------------------------------
+
 const pop_pie = document.getElementById('gene-pop-pie')
 pop_pie.style.width = '50px'
 const popPie = new Chart(
@@ -315,6 +338,9 @@ const popPie = new Chart(
 );
 
 
+
+// Integration of setup screen data ----> World parameters
+
 function formatWorldGenes(genes){
     let data = Object.keys(genes).map(gId => {
         let props = {}
@@ -326,6 +352,8 @@ function formatWorldGenes(genes){
             }
         }
         // console.log(props)
+
+        // formatted gene properties
         return {
             name: g.gname,
             inUse: true,
@@ -343,12 +371,23 @@ function formatWorldGenes(genes){
 
     // console.log(gene_data)
 
-    W.setGeneData(gene_data)
+    W.setGeneData(gene_data)    // load gene data into world
 }
+
+
+
+// Dominant Sub-gene Section
+// ------------------------------------------
+
+// keeps track of most popular combination of feature values, 
+// divides each feature into chunks of periods to discretize the distribution
 
 function showDominant(pop_stats){
     // propwise stats
     // pop_stats = {'5-5-5-5-5': 42, ...}
+
+    // provided with each feature value combination, along with population splitup
+
     // console.log(pop_stats, typeof pop_stats)
     // console.log('showing dominant')
 
@@ -362,6 +401,7 @@ function showDominant(pop_stats){
     // console.log(Object.keys(pop_stats))
 
     let rank = 0;
+    // display top 3 Sub-genes
     while(rank < 3){
         rank += 1
         let fx = document.getElementById(`fittest-${rank}`);
@@ -385,6 +425,7 @@ function showDominant(pop_stats){
         let ht = 60
         let martop = 13
         let marbot =  0
+        // HTML template for Sub-Gene
         fx.innerHTML = `
         <div class="fittest-blobs">
             <div class="row cent">
@@ -437,6 +478,11 @@ function showDominant(pop_stats){
 
     
 }
+
+
+
+// Button and Event Handlers
+// ---------------------------------------------------------------
 
 function showGeneData(genes){
 
@@ -586,7 +632,10 @@ document.getElementById('done-edit-world-btn').addEventListener('click', e => {
 })
 
 
-// showDominant()
+
+
+// Resizing layout handler
+// -----------------------------------
 
 window.addEventListener('resize', e => {
     resizeDOMs();

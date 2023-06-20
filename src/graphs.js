@@ -1,5 +1,7 @@
+// Graph Handling and Generation
+// --------------------------------------------------------
 
-
+// creates a Census graph showing filled Line plots for each gene's population history (top left of screen)
 const popLine = new Chart(
     document.getElementById('pop-line').getContext('2d'),
     {
@@ -45,6 +47,8 @@ popLine.update()
 
 
 var propBars = {}
+// creates bar graphs to track each feature's current splitup
+// updates along with simulation 
 function createPropBars(){
     let dom = document.getElementById('prop-bars-container');
     for(let f of propNames){
@@ -113,6 +117,9 @@ createPropBars()
 
 var trendCharts = {}
 var allTrends;
+
+
+// function to create Line graphs for each trait/feature, tracking simulation progress (inside Trend section)
 function createTrendCharts(){
     let dom = document.getElementById('prop-trends-container');
     let chartPrompts = propNames.concat(...['age'])
@@ -179,6 +186,9 @@ function createTrendCharts(){
         }
     }
 
+
+    // generating trend graphs for each feature's history, split by gene makeup as well
+
     allTrends = new Chart(
         document.getElementById('all-trends-graph').getContext('2d'),
         {
@@ -205,6 +215,9 @@ function createTrendCharts(){
 }
 
 createTrendCharts()
+
+
+// update each feature graph based on overall and moving average values
 function updateTrends(){
     for(let f in trendCharts) {
         
@@ -212,10 +225,11 @@ function updateTrends(){
         let arr = trendCharts[f].chart.data.datasets[0].data
         let startIndex = Math.max(Math.floor(2*arr.length/3), Math.max(0,arr.length-100))
 
-        let meanArr = arr.filter(x=>!isNaN(x)).slice(startIndex)
-        let mean = meanArr.reduce((acc,cur)=>acc+cur, 0) / (arr.length-startIndex)
+        let meanArr = arr.filter(x=>!isNaN(x)).slice(startIndex) // array of averages
+        let mean = meanArr.reduce((acc,cur)=>acc+cur, 0) / (arr.length-startIndex)  // average of averages
 
-        trendCharts[f].chart.options.plugins.annotation.annotations['overall'].yMin = mean
+        // annotate display range
+        trendCharts[f].chart.options.plugins.annotation.annotations['overall'].yMin = mean  
         trendCharts[f].chart.options.plugins.annotation.annotations['overall'].yMax = mean
     
         trendCharts[f].chart.update();
